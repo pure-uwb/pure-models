@@ -12,7 +12,7 @@
 
 - The Visa part is removed. Just lookes ar Mastercard in the absence of Visa.
 
-
+ 
 ## Comparing extended and siplified
 
 - add kdf
@@ -30,3 +30,15 @@ additional changes in DH rules.
 - Add lemmas on DH:
     - Auth
     - secrecy
+
+
+## Discussion 30.8.
+- Current models: cards and no phones
+    - would need to adapt model.
+    - later
+    - How to sell?
+- Patrick: anpassungen in non PAN models
+    - Bereinigen, was da ist.
+- Optional: verhandlung von UWB
+    - Downgrades ausschliessen
+    - AIP
