@@ -935,7 +935,7 @@ rule Terminal_Commits_ARQC:
         AIP = <'CDA', furtherData>
         supportedCVM = 'OnlinePIN'
         value = 'High'
-        DH = <Card_Eph,Pk, Terminal_Eph_Pk, Secret>
+        DH = <Card_Eph_Pk, Terminal_Eph_Pk, Secret>
         transaction = <~PAN, AIP, CVM, X, ATC, DH, AC, IAD>
     in
     [ Terminal_Received_AC($Terminal, $Bank, $CA,
