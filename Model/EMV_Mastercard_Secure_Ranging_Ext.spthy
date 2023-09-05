@@ -161,12 +161,12 @@ rule Card_Responds_To_GPO:
 
 // Compromised Keys
 rule Compromise_Ephemeral_Key_Terminal:
-    [ Ephemeral_Key_Terminal($Terminal, Eph_Pk, ~Eph_Sk)]
+    [ Ephemeral_Key_Terminal($Terminal, Eph_Pk, ~Eph_Sk)] //TODO: Where does this come from?
 	--[Compromise(<$Terminal, Eph_Pk>)]->
 	[Out(<Eph_Pk, ~Eph_Sk>)]
 
 rule Compromise_Ephemeral_Key_Card:
-	[ Ephemeral_Key_Card(~PAN, Eph_Pk, ~Eph_Sk)]
+	[ Ephemeral_Key_Card(~PAN, Eph_Pk, ~Eph_Sk)] //TODO: Where does this come from?
 	--[Compromise(<~PAN, Eph_Pk>)]->
 	[Out(<Eph_Pk, ~Eph_Sk>)]
 
@@ -176,7 +176,7 @@ rule Terminal_Ext_Sends_Hello:
         Terminal_Eph_Pk = 'g'^~Terminal_Eph_Sk
     in
     [ Terminal_Sent_GPO($Terminal, PDOL), In(<AIP, 'AFL'>),
-      Fr( ~Terminal_Eph_Sk ) ]
+      Fr( ~Terminal_Eph_Sk ) ] //TODO: Should it be possible to compromise it? see above rule.
   -->
     [ Terminal_Ext_Sent_Hello( $Terminal, PDOL, AIP,
                                <Terminal_Eph_Pk, ~Terminal_Eph_Sk>),
@@ -186,28 +186,34 @@ rule Card_Ext_Responds_To_Hello:
     let
         Card_Eph_Pk = 'g'^~Card_Eph_Sk
         DH = <Card_Eph_Pk, Terminal_Eph_Pk, Terminal_Eph_Pk^~Card_Eph_Sk>
-        mac = MAC(f(Terminal_Eph_Pk^~Card_Eph_Sk,'MAC_CARD_TO_READER'), <Card_Eph_Pk, Terminal_Eph_Pk>)
+        shared_key_MAC = f(Terminal_Eph_Pk^~Card_Eph_Sk,'MAC_CARD_TO_READER')
+        //TODO: We use the same key derivation function as for the AC. I would use a different key derivation function here. Not necessary but probably closer to reality.
+        mac = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) //The keys were the other way around. I addapted it according to the paper draft.
         EXT_HELLO = <'EXT_HELLO', Terminal_Eph_Pk>
     in
     [ In(EXT_HELLO),
-      Card_Responded_To_GPO( PAN, PDOL, ATC ),
-      Fr( ~Card_Eph_Sk )
+      Card_Responded_To_GPO( ~PAN, PDOL, ATC ),
+      Fr( ~Card_Eph_Sk ) //TODO: Should it be possible to compromise it? see above rule.
     ]
   -->
     [ Out( <'EXT_HELLO', Card_Eph_Pk, mac>),
-      Card_Responded_To_Hello( PAN, PDOL, ATC, DH )
-     ]
+      Card_Responded_To_Hello( ~PAN, PDOL, ATC, DH )
+    ]
 
 rule Terminal_Ext_Receives_Hello:
     let
-	    mac_t = MAC(f(Card_Eph_Pk^~Terminal_Eph_Sk,'MAC_CARD_TO_READER'), <Card_Eph_Pk, Terminal_Eph_Pk>)
-		edht = <Terminal_Eph_Pk, ~Terminal_Eph_Sk>
-		DH = <Card_Eph_Pk, Terminal_Eph_Pk, Card_Eph_Pk^~Terminal_Eph_Sk>
-		EXT_HELLO = <'EXT_HELLO', Card_Eph_Pk, mac_c>
+	    shared_key_MAC = f(Card_Eph_Pk^~Terminal_Eph_Sk,'MAC_CARD_TO_READER')
+      //TODO: We use the same key derivation function as for the AC. I would use a different key derivation function here. Not necessary but probably closer to reality.
+      mac_t = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) //The keys were the other way around. I addapted it according to the paper draft.
+		  edht = <Terminal_Eph_Pk, ~Terminal_Eph_Sk>
+		  DH = <Card_Eph_Pk, Terminal_Eph_Pk, Card_Eph_Pk^~Terminal_Eph_Sk>
+		  EXT_HELLO = <'EXT_HELLO', Card_Eph_Pk, mac_c>
     in
     [ Terminal_Ext_Sent_Hello($Terminal, PDOL, AIP, edht),
       In(EXT_HELLO)
-    ]--[Eq(mac_c,mac_t), Terminal_Ext_Sent_Hello_dgb($Terminal, PDOL, AIP, edht)
+    ]
+  --[ Eq(mac_c,mac_t) // TODO: In the paper draft, it is not explicit, that the MAC is verified by the terminal. Should this be explicit?
+    , Terminal_Ext_Sent_Hello_dgb($Terminal, PDOL, AIP, edht)
     ]->
     [ Terminal_Ext_Received_Hello( $Terminal, PDOL, AIP, DH)]  
         
@@ -597,7 +603,30 @@ rule Terminal_Sends_GenerateAC_CDA:
       Terminal_Sent_GenerateAC_CDA($Terminal, ~PAN, $Bank, $CA,
         X, AIP, DH, pubkBank, pubkCard, CVM, encPIN, acType, supportedCVM) ]
 
+/*old:
+
+rule Card_Responds_To_GenerateAC_NoCDA:
+    let CDOL1 = <'TVR', CVM, 'HHMMSS'>
+        X = <PDOL, CDOL1>
+        IAD = <'IAD', CID>
+        AC = MAC(f(~MK, ATC), <X, AIP, ATC, IAD>)
+        transaction = <~PAN, AIP, CVM, X, ATC, AC, IAD, 'Mastercard'>
+    in
+    [ Card_Ready_For_Cryptogram(~PAN, PDOL, ATC),
+      !AIP(~PAN, AIP),
+      !Shk(~PAN, ~MK),
+      !IssuingBank(~PAN, $Bank),
+      In(< 'GENERATE_AC', CID, 'NoCDA', CDOL1 >) ]
+  --[
+      Running(~PAN, 'Terminal', <'Card', 'Terminal', transaction>),
+      Running(~PAN, $Bank, <'Card', 'Bank', transaction>) ]->
+    [ Out(<CID, ATC, AC, IAD>) ]
+
+*/
+
 // Note AC does not contain DH
+//TODO: So the Bank can not check if UWB ranging worked?
+//TODO: when we add DH to the transaction and the Bank can not verify DH, then the bank can not agree with the card. Right?
 rule Card_Responds_To_GenerateAC_NoCDA:
     let CDOL1 = <'TVR', CVM, 'HHMMSS'>
         X = <PDOL, CDOL1>
@@ -640,6 +669,7 @@ rule Card_Responds_To_GenerateAC_CDA:
 */
 
 // new
+// The DH public keys are added in the SDAD.
 rule Card_Responds_To_GenerateAC_CDA:
     let PDOL = <amount, country, currency, date, type, UN>
         CDOL1 = <'TVR', CVM, 'HHMMSS'>
@@ -773,11 +803,12 @@ rule Terminal_Commits_TC:
     [ Terminal_Received_AC($Terminal, $Bank, $CA,
         nc, 'TC', transaction, supportedCVM, ~channelID),
       !Value($amount, value) ]
-  --[ TerminalAccepts(transaction), Secret_Sigma(Secret),
+  --[ TerminalAccepts(transaction), 
+      Secret_Sigma(Secret),
       Commit_DH('Terminal', ~PAN, DH),
       Commit('Terminal', ~PAN, <'Card', 'Terminal', transaction>),
       Honest($CA), Honest($Bank), Honest($Terminal), Honest(~PAN), 
-      Honest(<~PAN, Card_Eph_Pk>), Honest(<$Terminal, Terminal_Eph_Pk>)]->
+      Honest(<~PAN, Card_Eph_Pk>), Honest(<$Terminal, Terminal_Eph_Pk>)]-> //TODO: These Second Honest action facts are not used. Also: Having the same action fact once with a tuple and once without seems dangerous.
     [ ]
 /* old:
 rule Bank_Receives_AC:
@@ -798,6 +829,7 @@ rule Bank_Receives_AC:
     let AC = MAC(f(~MK, ATC), <X, AIP, ATC, IAD>)
         ARPC = MAC_arpc(f(~MK, ATC), AC XOR p8('ARC'))
         transaction = <~PAN, AIP, CVM, X, ATC, DH, AC, IAD>
+        //TODO: The bank receives the DH public keys here. Is this intended? Is this documented in the paper draft?
     in
     [ Recv($Terminal, $Bank, <channelID, 'Mastercard', '1'>,
         <transaction, encPIN>),
