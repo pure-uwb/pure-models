@@ -160,6 +160,7 @@ rule Card_Responds_To_GPO:
 
 
 // Compromised Keys
+/*
 rule Compromise_Ephemeral_Key_Terminal:
     [ Ephemeral_Key_Terminal($Terminal, Eph_Pk, ~Eph_Sk)] //TODO: Where does this come from?
 	--[Compromise(<$Terminal, Eph_Pk>)]->
@@ -169,7 +170,7 @@ rule Compromise_Ephemeral_Key_Card:
 	[ Ephemeral_Key_Card(~PAN, Eph_Pk, ~Eph_Sk)] //TODO: Where does this come from?
 	--[Compromise(<~PAN, Eph_Pk>)]->
 	[Out(<Eph_Pk, ~Eph_Sk>)]
-
+*/
 
 rule Terminal_Ext_Sends_Hello:
     let 
@@ -212,7 +213,7 @@ rule Terminal_Ext_Receives_Hello:
     [ Terminal_Ext_Sent_Hello($Terminal, PDOL, AIP, edht),
       In(EXT_HELLO)
     ]
-  --[ Eq(mac_c,mac_t) // TODO: In the paper draft, it is not explicit, that the MAC is verified by the terminal. Should this be explicit?
+  --[ Eq(mac_c,mac_t) // TODO: In the paper draft, this check is done at the end with the SDAD.
     , Terminal_Ext_Sent_Hello_dgb($Terminal, PDOL, AIP, edht)
     ]->
     [ Terminal_Ext_Received_Hello( $Terminal, PDOL, AIP, DH)]  
@@ -808,7 +809,8 @@ rule Terminal_Commits_TC:
       Commit_DH('Terminal', ~PAN, DH),
       Commit('Terminal', ~PAN, <'Card', 'Terminal', transaction>),
       Honest($CA), Honest($Bank), Honest($Terminal), Honest(~PAN), 
-      Honest(<~PAN, Card_Eph_Pk>), Honest(<$Terminal, Terminal_Eph_Pk>)]-> //TODO: These Second Honest action facts are not used. Also: Having the same action fact once with a tuple and once without seems dangerous.
+      //Honest(<~PAN, Card_Eph_Pk>), Honest(<$Terminal, Terminal_Eph_Pk>)
+    ]-> //TODO: These Second Honest action facts are not used. Also: Having the same action fact once with a tuple and once without seems dangerous.
     [ ]
 /* old:
 rule Bank_Receives_AC:
