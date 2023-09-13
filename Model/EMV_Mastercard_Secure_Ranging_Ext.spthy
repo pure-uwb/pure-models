@@ -808,7 +808,7 @@ rule Terminal_Commits_TC:
       Secret_Sigma(Secret),
       Commit_DH('Terminal', ~PAN, DH),
       Commit('Terminal', ~PAN, <'Card', 'Terminal', transaction>),
-      Honest($CA), Honest($Bank), Honest($Terminal), Honest(~PAN), 
+      Honest($CA), Honest($Bank), Honest($Terminal), Honest(~PAN)
       //Honest(<~PAN, Card_Eph_Pk>), Honest(<$Terminal, Terminal_Eph_Pk>)
     ]-> //TODO: These Second Honest action facts are not used. Also: Having the same action fact once with a tuple and once without seems dangerous.
     [ ]
@@ -1262,6 +1262,7 @@ restriction compatibility:
   (All #i. Compatible_CID_CVM('TC', 'OnlinePIN')@i ==> F) &
   (All #i. Compatible_CID_acType('TC', 'ARQC')@i ==> F)"
 
+//Proven
 lemma executable:
   exists-trace
   "Ex Bank PAN t #i #j #k #l.
@@ -1276,6 +1277,7 @@ lemma executable:
     (All A B r #a #b. Role(A, r)@a & Role(B, r)@b ==> A = B) &
     not (Ex A #a. Compromise(A)@a)"
 
+//proven
 lemma bank_accepts:
   "All t #i.
     TerminalAccepts(t)@i
@@ -1283,6 +1285,7 @@ lemma bank_accepts:
     not (Ex #j. BankDeclines(t)@j) |
     Ex A #k. Honest(A)@i & Compromise(A)@k"
 
+//proven
 lemma auth_to_terminal_minimal:
   "All T P r t #i.
     (All #a #b. OneCard()@a & OneCard()@b ==> #a = #b) &
@@ -1291,6 +1294,7 @@ lemma auth_to_terminal_minimal:
     (Ex #j. Running(P, T, <r, 'Terminal', t>)@j) |
     Ex A #k. Honest(A)@i & Compromise(A)@k"
 
+//proven
 lemma auth_to_terminal:
   "All T P r t #i.
     Commit(T, P, <r, 'Terminal', t>)@i
@@ -1301,6 +1305,7 @@ lemma auth_to_terminal:
     Ex A #k. Honest(A)@i & Compromise(A)@k"
 
 // new
+// proven
 lemma auth_to_terminal_minimal_dh:
   "All T P DH #i.
     (All #a #b. OneCard()@a & OneCard()@b ==> #a = #b) &
@@ -1310,6 +1315,7 @@ lemma auth_to_terminal_minimal_dh:
     Ex A #k. Honest(A)@i & Compromise(A)@k"
 
 // new
+//proven
 lemma auth_to_terminal_dh:
   "All T P DH #i.
     Commit_DH(T, P, DH)@i
