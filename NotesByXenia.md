@@ -42,3 +42,18 @@ additional changes in DH rules.
 - Optional: verhandlung von UWB
     - Downgrades ausschliessen
     - AIP
+
+## some notes
+- optional TODO:
+    - Add compromised key
+        - vermutlich unnütz
+        - interleving ist drin.
+    - Add public key to mac, Verfy with SDAD
+        - nicht dringend
+        - 
+
+- To Discuss: 
+    - Do we need an agreement property on the Secret?
+
+
+- We send the DH material as part of the transaction to the bank. As the terminal and card agree on it and the terminal and bank communicate over a secure channel, the card and terminal also agree on the DH material.
