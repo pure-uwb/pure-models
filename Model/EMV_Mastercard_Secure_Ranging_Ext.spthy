@@ -7,7 +7,7 @@ builtins:   signing, hashing, asymmetric-encryption, xor, diffie-hellman
 functions:  NEq/2,
             f/2,
             MAC/2, MAC_arpc/2,
-            p8/1
+            p8/1,
             kdf/2
 
 rule Terminal_Bank_Network:
