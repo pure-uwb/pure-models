@@ -1,43 +1,26 @@
-/*
-WARNING: the following wellformedness checks failed!
-
-Derivation Checks
-=================
-
-  Derivation checks timed out. Use --derivcheck-timeout=INT to configure timeout, 0 to deactivate.
-*/
-
-/*
-Generated from:
-Tamarin version 1.8.0
-Maude version 3.1
-Git revision: f172d7f00b1485446a1e7a42dc14623c2189cc42, branch: master
-Compiled at: 2023-08-31 10:43:56.765388839 UTC
-*/
-
 ==============================================================================
 summary of summaries:
 
 analyzed: EMV_Mastercard_Secure_Ranging_Ext.spthy
 
   output:          EMV_Mastercard_Secure_Ranging_Ext.proof
-  processing time: 8754.55s
+  processing time: 2640.09s
 
   WARNING: 1 wellformedness check failed!
            The analysis results might be wrong!
 
   executable (exists-trace): verified (35 steps)
   bank_accepts (all-traces): verified (558 steps)
-  auth_to_terminal_minimal (all-traces): verified (284 steps)
-  auth_to_terminal (all-traces): verified (737 steps)
-  auth_to_terminal_minimal_dh (all-traces): verified (179 steps)
-  auth_to_terminal_dh (all-traces): verified (1402 steps)
-  auth_to_bank_minimal (all-traces): verified (115 steps)
-  auth_to_bank (all-traces): verified (633 steps)
+  auth_to_terminal_minimal (all-traces): verified (199 steps)
+  auth_to_terminal (all-traces): verified (433 steps)
+  auth_to_terminal_minimal_dh (all-traces): verified (130 steps)
+  auth_to_terminal_dh (all-traces): verified (1104 steps)
+  auth_to_bank_minimal (all-traces): verified (111 steps)
+  auth_to_bank (all-traces): verified (613 steps)
   secrecy_MK (all-traces): verified (6 steps)
   secrecy_privkCard (all-traces): verified (7 steps)
   secrecy_PIN (all-traces): verified (3 steps)
   secrecy_PAN (all-traces): falsified - found trace (7 steps)
-  secrecy_SIGMA (all-traces): verified (20946 steps)
+  secrecy_SIGMA (all-traces): verified (8890 steps)
 
 ==============================================================================

@@ -7,7 +7,8 @@ builtins:   signing, hashing, asymmetric-encryption, xor, diffie-hellman
 functions:  NEq/2,
             f/2,
             MAC/2, MAC_arpc/2,
-            p8/1
+            p8/1,
+            kdf/2
 
 rule Terminal_Bank_Network:
     [ Send(S, R, channelID, msg) ]-->[ Recv(S, R, channelID, msg) ]
@@ -20,11 +21,6 @@ rule Generate_Amount_High:
 
 rule Generate_ATC:
     [ Fr(~ATC) ]-->[ !ATC(~ATC), Out(~ATC) ]
-
-/* Not needed
-rule Generate_SDAD_Format_Visa:
-    [ ]--> [ !SDADFormat('05', 'TC'), !SDADFormat('95', 'ARQC') ]
-*/
 
 rule Create_CA:
     let pubkCA = pk(~privkCA)
@@ -158,16 +154,16 @@ rule Card_Responds_To_GPO:
 
 // ------- NEW DH-SIGMA sub-protocol -----------
 
-
+//Optional TODO: Add compromisation of ephemeral keys
 // Compromised Keys
 /*
 rule Compromise_Ephemeral_Key_Terminal:
-    [ Ephemeral_Key_Terminal($Terminal, Eph_Pk, ~Eph_Sk)] //TODO: Where does this come from?
+    [ Ephemeral_Key_Terminal($Terminal, Eph_Pk, ~Eph_Sk)] 
 	--[Compromise(<$Terminal, Eph_Pk>)]->
 	[Out(<Eph_Pk, ~Eph_Sk>)]
 
 rule Compromise_Ephemeral_Key_Card:
-	[ Ephemeral_Key_Card(~PAN, Eph_Pk, ~Eph_Sk)] //TODO: Where does this come from?
+	[ Ephemeral_Key_Card(~PAN, Eph_Pk, ~Eph_Sk)] 
 	--[Compromise(<~PAN, Eph_Pk>)]->
 	[Out(<Eph_Pk, ~Eph_Sk>)]
 */
@@ -177,7 +173,7 @@ rule Terminal_Ext_Sends_Hello:
         Terminal_Eph_Pk = 'g'^~Terminal_Eph_Sk
     in
     [ Terminal_Sent_GPO($Terminal, PDOL), In(<AIP, 'AFL'>),
-      Fr( ~Terminal_Eph_Sk ) ] //TODO: Should it be possible to compromise it? see above rule.
+      Fr( ~Terminal_Eph_Sk ) ] //Optional TODO: Add compromisation of ephemeral keys
   -->
     [ Terminal_Ext_Sent_Hello( $Terminal, PDOL, AIP,
                                <Terminal_Eph_Pk, ~Terminal_Eph_Sk>),
@@ -187,14 +183,14 @@ rule Card_Ext_Responds_To_Hello:
     let
         Card_Eph_Pk = 'g'^~Card_Eph_Sk
         DH = <Card_Eph_Pk, Terminal_Eph_Pk, Terminal_Eph_Pk^~Card_Eph_Sk>
-        shared_key_MAC = f(Terminal_Eph_Pk^~Card_Eph_Sk,'MAC_CARD_TO_READER')
-        //TODO: We use the same key derivation function as for the AC. I would use a different key derivation function here. Not necessary but probably closer to reality.
-        mac = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) //The keys were the other way around. I addapted it according to the paper draft.
+        shared_key_MAC = kdf(Terminal_Eph_Pk^~Card_Eph_Sk,'MAC_CARD_TO_READER')
+        mac = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) 
+        //TODO: add the card's public key to the MAC.
         EXT_HELLO = <'EXT_HELLO', Terminal_Eph_Pk>
     in
     [ In(EXT_HELLO),
       Card_Responded_To_GPO( ~PAN, PDOL, ATC ),
-      Fr( ~Card_Eph_Sk ) //TODO: Should it be possible to compromise it? see above rule.
+      Fr( ~Card_Eph_Sk ) //Optional TODO: Add compromisation of ephemeral keys
     ]
   -->
     [ Out( <'EXT_HELLO', Card_Eph_Pk, mac>),
@@ -203,9 +199,9 @@ rule Card_Ext_Responds_To_Hello:
 
 rule Terminal_Ext_Receives_Hello:
     let
-	    shared_key_MAC = f(Card_Eph_Pk^~Terminal_Eph_Sk,'MAC_CARD_TO_READER')
-      //TODO: We use the same key derivation function as for the AC. I would use a different key derivation function here. Not necessary but probably closer to reality.
-      mac_t = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) //The keys were the other way around. I addapted it according to the paper draft.
+	    shared_key_MAC = kdf(Card_Eph_Pk^~Terminal_Eph_Sk,'MAC_CARD_TO_READER')
+      mac_t = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) 
+      //TODO: When adding the public key to the mac, move this verification to the SDAD verification.
 		  edht = <Terminal_Eph_Pk, ~Terminal_Eph_Sk>
 		  DH = <Card_Eph_Pk, Terminal_Eph_Pk, Card_Eph_Pk^~Terminal_Eph_Sk>
 		  EXT_HELLO = <'EXT_HELLO', Card_Eph_Pk, mac_c>
@@ -213,7 +209,7 @@ rule Terminal_Ext_Receives_Hello:
     [ Terminal_Ext_Sent_Hello($Terminal, PDOL, AIP, edht),
       In(EXT_HELLO)
     ]
-  --[ Eq(mac_c,mac_t) // TODO: In the paper draft, this check is done at the end with the SDAD.
+  --[ Eq(mac_c,mac_t)
     , Terminal_Ext_Sent_Hello_dgb($Terminal, PDOL, AIP, edht)
     ]->
     [ Terminal_Ext_Received_Hello( $Terminal, PDOL, AIP, DH)]  
@@ -626,8 +622,6 @@ rule Card_Responds_To_GenerateAC_NoCDA:
 */
 
 // Note AC does not contain DH
-//TODO: So the Bank can not check if UWB ranging worked?
-//TODO: when we add DH to the transaction and the Bank can not verify DH, then the bank can not agree with the card. Right?
 rule Card_Responds_To_GenerateAC_NoCDA:
     let CDOL1 = <'TVR', CVM, 'HHMMSS'>
         X = <PDOL, CDOL1>
@@ -671,12 +665,13 @@ rule Card_Responds_To_GenerateAC_CDA:
 
 // new
 // The DH public keys are added in the SDAD.
+//TODO: double check with papaer
 rule Card_Responds_To_GenerateAC_CDA:
     let PDOL = <amount, country, currency, date, type, UN>
         CDOL1 = <'TVR', CVM, 'HHMMSS'>
         X = <PDOL, CDOL1>
         DH = <Card_Eph_Pk, Terminal_Eph_Pk, Secret>
-        DH_AUTH = <Card_Eph_Pk, Terminal_Eph_Pk>
+        DH_AUTH = <Terminal_Eph_Pk, Card_Eph_Pk>
         IAD = <'IAD', CID>
         AIP = <'CDA', furtherData>
         AC = MAC(f(~MK, ATC), <X, AIP, ATC, IAD>)
@@ -756,7 +751,7 @@ rule Terminal_Receives_AC_CDA:
     let PDOL = <$amount, country, currency, date, type, ~UN>
         X = <PDOL, CDOL1>
         DH = <Card_Eph_Pk, Terminal_Eph_Pk, Secret>
-        DH_AUTH = <Card_Eph_Pk, Terminal_Eph_Pk>
+        DH_AUTH = <Terminal_Eph_Pk, Card_Eph_Pk>
         T = h(<X, CID, ATC, AC, IAD, DH_AUTH>)
         transaction = <~PAN, AIP, CVM, X, ATC, DH, AC, IAD>
     in
@@ -810,8 +805,9 @@ rule Terminal_Commits_TC:
       Commit('Terminal', ~PAN, <'Card', 'Terminal', transaction>),
       Honest($CA), Honest($Bank), Honest($Terminal), Honest(~PAN)
       //Honest(<~PAN, Card_Eph_Pk>), Honest(<$Terminal, Terminal_Eph_Pk>)
-    ]-> //TODO: These Second Honest action facts are not used. Also: Having the same action fact once with a tuple and once without seems dangerous.
+    ]-> //Optional TODO: Add honest Facts for ephemeral key reveal. Needs different facts to differentiate between ephemeral and non-ephemeral.
     [ ]
+
 /* old:
 rule Bank_Receives_AC:
     let AC = MAC(f(~MK, ATC), <X, AIP, ATC, IAD>)
@@ -831,7 +827,6 @@ rule Bank_Receives_AC:
     let AC = MAC(f(~MK, ATC), <X, AIP, ATC, IAD>)
         ARPC = MAC_arpc(f(~MK, ATC), AC XOR p8('ARC'))
         transaction = <~PAN, AIP, CVM, X, ATC, DH, AC, IAD>
-        //TODO: The bank receives the DH public keys here. Is this intended? Is this documented in the paper draft?
     in
     [ Recv($Terminal, $Bank, <channelID, 'Mastercard', '1'>,
         <transaction, encPIN>),
@@ -984,267 +979,6 @@ rule Terminal_Commits_ARQC:
       Honest($CA), Honest($Bank), Honest($Terminal), Honest(~PAN) ]->
     [ ]
 
-/*
-rule Create_Card_Visa:
-    let pubkCard = pk(~privkCard)
-        cont = <'04', ~PAN, pubkCard, $Bank>
-        certCard = <cont, sign{cont}~privkBank>
-    in
-    [ Fr(~PAN),
-      Fr(~expDate),
-      Fr(~privkCard),
-      Fr(~MK),
-      !LtkBank($Bank, ~privkBank),
-      !CertBank($Bank, certBank),
-      !IssuingCA($Bank, $CA)
-    ]
-  --[ Role(~PAN, 'Card'),
-      SecretPAN(~PAN),
-      SecretMK(~MK),
-      SecretPrivkCard(~privkCard),
-      Honest($CA), Honest($Bank), Honest(~PAN) ]->
-    [ !LtkCard(~PAN, ~privkCard),
-      !AID(~PAN, 'Visa'),
-      Out(pubkCard),
-      !ExpirationDate(~PAN, ~expDate),
-      !Shk(~PAN, ~MK),
-      !IssuingBank(~PAN, $Bank),
-      !Records_Visa(~PAN, ~expDate, $CA, certBank, certCard),
-      Set_PIN(~PAN, 'OnlinePIN', $CA, $Bank) ]
-
-rule Terminal_Sends_GPO_Low_Visa:
-    let date = 'YYMMDD'
-        type = 'Purchase'
-        currency = 'CHF'
-        country = 'Switzerland'
-        TTQ = <'TC', 'NoPIN'>
-        PDOL = <TTQ, $amount, country, currency, date, type, ~UN>
-    in
-    [ Fr(~UN),
-      !Value($amount, 'Low') ]
-  --[ OneTerminal(),
-      Role($Terminal, 'Terminal') ]->
-    [ Out(<'GET_PROCESSING_OPTIONS', PDOL>),
-      Terminal_Sent_GPO_Visa($Terminal, PDOL) ]
-
-rule Terminal_Sends_GPO_High_Visa:
-    let date = 'YYMMDD'
-        type = 'Purchase'
-        currency = 'CHF'
-        country = 'Switzerland'
-        TTQ = <'ARQC', 'OnlinePIN'>
-        PDOL = <TTQ, $amount, country, currency, date, type, ~UN>
-    in
-    [ Fr(~UN),
-      !Value($amount, 'High') ]
-  --[ OneTerminal(),
-      Role($Terminal, 'Terminal') ]->
-    [ Out(<'GET_PROCESSING_OPTIONS', PDOL>),
-      Terminal_Sent_GPO_Visa($Terminal, PDOL) ]
-
-rule Card_Responds_To_GPO_EMV_Visa:
-    let PDOL = <<acType, CVM>, amount, country, currency, date, type, UN>
-        track2ED = <~PAN, ~expDate>
-        CID = 'ARQC'
-        CTQ = CVM
-        IAD = <'IAD', CID>
-        AIP = <'EMV', $furtherData>
-        AC = MAC(f(~MK, ATC), <PDOL, AIP, ATC, IAD>)
-        transaction = <~PAN, AIP, CTQ, PDOL, ATC, AC, IAD>
-    in
-    [ In(<'GET_PROCESSING_OPTIONS', PDOL>),
-      !Shk(~PAN, ~MK),
-      !AID(~PAN, 'Visa'),
-      !ExpirationDate(~PAN, ~expDate),
-      !IssuingBank(~PAN, $Bank),
-      !ATC(ATC) ]
-  --[ OneCard(),
-      Once(<~PAN, ATC, 'Card'>),
-      NEq(CVM, 'CDCVM'),
-      Running(~PAN, 'Terminal', <'Card', 'Terminal', transaction>),
-      Running(~PAN, $Bank, <'Card', 'Bank', transaction>) ]->
-    [ Out(< AIP, 'AFL', track2ED, IAD, AC, CID, ATC, CTQ >),
-      Card_Responded_To_GPO_Visa(~PAN, AIP, PDOL, ATC, AC, CID, CTQ, IAD) ]
-
-rule Card_Responds_To_GPO_DDA_Visa:
-    let PDOL = <<CID, CVM>, amount, country, currency, date, type, UN>
-        track2ED = <~PAN, ~expDate>
-        CTQ = CVM
-        IAD = <'IAD', CID>
-        AIP = <'DDA', $furtherData>
-        AC = MAC(f(~MK, ATC), <PDOL, AIP, ATC, IAD>)
-    in
-    [ In(<'GET_PROCESSING_OPTIONS', PDOL>),
-      !Shk(~PAN, ~MK),
-      !AID(~PAN, 'Visa'),
-      !ExpirationDate(~PAN, ~expDate),
-      !ATC(ATC) ]
-  --[ OneCard(),
-      Once(<~PAN, ATC, 'Card'>),
-      NEq(CVM, 'CDCVM')
-    ]->
-    [ Out(< AIP, 'AFL', track2ED, IAD, AC, CID, ATC, CTQ >),
-      Card_Responded_To_GPO_Visa(~PAN, AIP, PDOL, ATC, AC, CID, CTQ, IAD) ]
-
-rule Terminal_Sends_ReadRecord_Visa:
-    let PDOL = <<acType, CVM>, $amount, country, currency, date, type, ~UN>
-    in
-    [ Terminal_Sent_GPO_Visa($Terminal, PDOL),
-      In(< AIP, 'AFL', <~PAN, expDate>, IAD, AC, CID, ATC, CTQ >) ]
-  --[ Compatible_CID_acType(CID, acType) ]->
-    [ Out(< 'READ_RECORD', 'AFL' >),
-      Terminal_Sent_ReadRecord_Visa($Terminal, PDOL, AIP, ~PAN,
-        expDate, IAD, AC, CID, ATC, CTQ) ]
-
-rule Card_Responds_To_ReadRecord_EMV_Visa:
-    let AIP = <'EMV', furtherData>
-        transaction = <~PAN, AIP, CTQ, PDOL, ATC, AC, IAD>
-    in
-    [ Card_Responded_To_GPO_Visa(~PAN, AIP, PDOL, ATC, AC, CID, CTQ, IAD),
-      !Records_Visa(~PAN, ~expDate, $CA, certBank, certCard),
-      In(< 'READ_RECORD', 'AFL' >) ]
-  -->
-    [ Out(<~PAN, ~expDate>) ]
-
-rule Card_Responds_To_ReadRecord_DDA_Visa:
-    let PDOL = <TTQ, amount, country, currency, date, type, UN>
-        AIP = <'DDA', furtherData>
-        d = <format, ATC, UN, amount, 'CHF', ~nc, CTQ, AIP>
-        SDAD = sign{d}~privkCard
-        transaction = <~PAN, AIP, CTQ, PDOL, ATC, AC, IAD>
-    in
-    [ Card_Responded_To_GPO_Visa(~PAN, AIP, PDOL, ATC, AC, CID, CTQ, IAD),
-      !Records_Visa(~PAN, ~expDate, $CA, certBank, certCard),
-      Fr(~nc),
-      !LtkCard(~PAN, ~privkCard),
-      !SDADFormat(format, CID),
-      !IssuingBank(~PAN, $Bank),
-      In(< 'READ_RECORD', 'AFL' >) ]
-  --[ Running(~PAN, 'Terminal', <'Card', 'Terminal', transaction>),
-      Running(~PAN, $Bank, <'Card', 'Bank', transaction>) ]->
-    [ Out(< ~PAN, ~expDate, $CA, certBank, certCard, ~nc, CTQ, SDAD >) ]
-
-rule Terminal_Receives_Records_EMV_Visa:
-    let AIP = <'EMV', furtherData>
-        records = <~PAN, expDate>
-    in
-    [ Terminal_Sent_ReadRecord_Visa($Terminal, PDOL, AIP, ~PAN,
-        expDate, IAD, AC, 'ARQC', ATC, CTQ),
-      In(records),
-      !IssuingBank(~PAN, $Bank),
-      !CertBank($Bank, <<'02', $Bank, pubkBank, $CA>, sign2>) ]
-  -->
-    [ Terminal_Ready_For_CVM_Visa($Terminal, ~PAN, PDOL, AIP, $CA, $Bank,
-        pubkBank, 'Null', IAD, AC, 'ARQC', ATC, CTQ) ]
-
-rule Terminal_Receives_Records_DDA_Visa:
-    let PDOL = <TTQ, $amount, country, currency, date, type, ~UN>
-        AIP = <'DDA', furtherData>
-        d = <format, ATC, ~UN, $amount, 'CHF', nc, CTQ, AIP>
-        records = <~PAN, expDate, $CA,
-                    <<'02', $Bank, pubkBank, $CA>, sign2>,
-                    <<'04', ~PAN, pubkCard, $Bank>, sign3>,
-                    nc, CTQ, SDAD>
-    in
-    [ Terminal_Sent_ReadRecord_Visa($Terminal, PDOL, AIP, ~PAN,
-        expDate, IAD, AC, CID, ATC, CTQ),
-      In(records),
-      !IssuingCA($Bank, $CA),
-      !SDADFormat(format, CID),
-      !CertCA($CA, <<'01', $CA, pubkCA, $CA>, sign1>) ]
-  --[
-      Eq( verify(sign1, <'01', $CA, pubkCA, $CA>, pubkCA), true ),
-      Eq( verify(sign2, <'02', $Bank, pubkBank, $CA>, pubkCA), true ),
-      Eq( verify(sign3, <'04', ~PAN, pubkCard, $Bank>, pubkBank), true ),
-      Eq( verify(SDAD, d, pubkCard), true )
-    ]->
-    [ Terminal_Ready_For_CVM_Visa($Terminal, ~PAN, PDOL, AIP, $CA, $Bank,
-        pubkBank, nc, IAD, AC, CID, ATC, CTQ) ]
-
-rule Terminal_Processes_CVM_NoPIN_Visa:
-    let PDOL = <TTQ, $amount, country, currency, date, type, ~UN>
-    in
-    [ Terminal_Ready_For_CVM_Visa($Terminal, ~PAN, PDOL, AIP, $CA, $Bank,
-        pubkBank, nc, IAD, AC, CID, ATC, 'NoPIN'),
-      !Value($amount, 'Low') ]
-  -->
-    [ Terminal_Ready_To_Send_AC_Visa($Terminal, ~PAN, PDOL, AIP, $CA, $Bank,
-        nc, IAD, AC, CID, ATC, 'NoPIN', 'Null') ]
-
-rule Terminal_Processes_CVM_CDCVM_Visa:
-    [ Terminal_Ready_For_CVM_Visa($Terminal, ~PAN, PDOL, AIP, $CA, $Bank,
-        pubkBank, nc, IAD, AC, 'ARQC', ATC, 'CDCVM') ]
-  -->
-    [ Terminal_Ready_To_Send_AC_Visa($Terminal, ~PAN, PDOL, AIP, $CA, $Bank,
-        nc, IAD, AC, 'ARQC', ATC, 'CDCVM', 'Null') ]
-
-rule Terminal_Processes_CVM_OnlinePIN_Visa:
-    let PDOL = <TTQ, $amount, country, currency, date, type, ~UN>
-    in
-    [ Terminal_Ready_For_CVM_Visa($Terminal, ~PAN, PDOL, AIP, $CA, $Bank,
-        pubkBank, nc, IAD, AC, 'ARQC', ATC, 'OnlinePIN'),
-      !Entered_PIN(~PAN, PIN),
-      !Value($amount, 'High') ]
-  -->
-    [ Terminal_Ready_To_Send_AC_Visa($Terminal, ~PAN, PDOL, AIP, $CA, $Bank,
-        nc, IAD, AC, 'ARQC', ATC, 'OnlinePIN', aenc{PIN}pubkBank) ]
-
-rule Terminal_Sends_AC_Visa:
-    let transaction = <~PAN, AIP, CVM, PDOL, ATC, AC, IAD>
-    in
-    [ Terminal_Ready_To_Send_AC_Visa($Terminal, ~PAN, PDOL, AIP, $CA, $Bank,
-        nc, IAD, AC, CID, ATC, CVM, encPIN),
-      Fr(~channelID) ]
-  --[ Running($Terminal, $Bank, <'Terminal', 'Bank', transaction>) ]->
-    [ Terminal_Received_AC_Visa($Terminal, $Bank, $CA,
-        nc, CID, transaction, ~channelID),
-      Send($Terminal, $Bank, <~channelID, 'Visa', '1'>, <transaction, encPIN>) ]
-
-rule Bank_Receives_AC_Visa:
-    let AC = MAC(f(~MK, ATC), <PDOL, AIP, ATC, IAD>)
-        ARPC = MAC_arpc(f(~MK, ATC), AC XOR p8('ARC'))
-        transaction = <~PAN, AIP, CVM, PDOL, ATC, AC, IAD>
-    in
-    [ Recv($Terminal, $Bank, <channelID, 'Visa', '1'>,
-        <transaction, encPIN>),
-      !Shk(~PAN, ~MK),
-      !IssuingBank(~PAN, $Bank) ]
-  --[ Once(<~PAN, ATC, 'Bank'>) ]->
-    [ Bank_Checked_AC_Visa($Bank, $Terminal,
-        transaction, encPIN, channelID, ARPC) ]
-
-rule Bank_Receives_AC_Failed_Visa:
-    let correctAC = MAC(f(~MK, ATC), <PDOL, AIP, ATC, IAD>)
-        transaction = <~PAN, AIP, CVM, PDOL, ATC, AC, IAD>
-    in
-    [ Recv($Terminal, $Bank, <channelID, 'Visa', '1'>, <transaction, encPIN>),
-      !Shk(~PAN, ~MK) ]
-  --[ NEq(correctAC, AC),
-      BankDeclines(transaction) ]->
-    [ ]
-
-rule Bank_Processes_CVM_NotOnlinePIN_Visa:
-    let PDOL = <TTQ, amount, country, currency, date, type, UN>
-        transaction = <~PAN, AIP, CVM, PDOL, ATC, AC, IAD>
-    in
-    [ Bank_Checked_AC_Visa($Bank, $Terminal,
-        transaction, 'Null', channelID, ARPC) ]
-  --[ NEq(CVM, 'OnlinePIN'),
-      Running($Bank, $Terminal, <'Bank', 'Terminal', transaction>) ]->
-    [ Bank_Commits_Visa($Bank, $Terminal, transaction, channelID, ARPC) ]
-
-rule Bank_Processes_CVM_OnlinePIN_Visa:
-    let encPIN = aenc{~PIN}pk(~privkBank)
-        transaction = <~PAN, AIP, 'OnlinePIN', PDOL, ATC, AC, IAD>
-    in
-    [ Bank_Checked_AC_Visa($Bank, $Terminal,
-        transaction, encPIN, channelID, ARPC),
-      !LtkBank($Bank, ~privkBank),
-      !PIN(~PAN, ~PIN) ]
-  --[ Running($Bank, $Terminal, <'Bank', 'Terminal', transaction>) ]->
-    [ Bank_Commits_Visa($Bank, $Terminal, transaction, channelID, ARPC) ]
-*/
-
 restriction equal:
   "All a b #i. Eq(a, b)@i ==> a = b"
 
@@ -1315,6 +1049,7 @@ lemma auth_to_terminal_minimal_dh:
     Ex A #k. Honest(A)@i & Compromise(A)@k"
 
 // new
+//proven
 lemma auth_to_terminal_dh:
   "All T P DH #i.
     Commit_DH(T, P, DH)@i
