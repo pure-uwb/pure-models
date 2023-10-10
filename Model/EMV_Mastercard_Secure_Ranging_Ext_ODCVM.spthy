@@ -540,7 +540,7 @@ rule Terminal_Processes_CVM_ODCVM:
     [ Terminal_Ready_For_CVM($Terminal, ~PAN, $Bank, $CA, PDOL,
         AIP, DH, pubkBank, pubkCard, CVM),
       !Value($amount, 'High') ]
-  -->
+  --[ ODCVM_Terminal(~PAN) ]->
     [ Terminal_Ready_For_Cryptogram($Terminal, ~PAN, $Bank, $CA, PDOL,
         AIP, DH, pubkBank, pubkCard, 'ODCVM', 'Null', CVM) ]
 
@@ -1010,6 +1010,21 @@ lemma executable:
     (All #a #b. OneTerminal()@a & OneTerminal()@b ==> #a = #b) &
     (All A B r #a #b. Role(A, r)@a & Role(B, r)@b ==> A = B) &
     not (Ex A #a. Compromise(A)@a)"
+
+lemma executable_ODCVM:
+  exists-trace
+    "Ex Bank PAN t #i #j #k #l #m.
+      i < j &
+      Running(PAN, 'Terminal', <'Card', 'Terminal', t>)@i &
+      Commit('Terminal', PAN, <'Card', 'Terminal', t>)@j &
+      k < l &
+      Running(PAN, Bank, <'Card', 'Bank', t>)@k &
+      Commit(Bank, PAN, <'Card', 'Bank', t>)@l &
+      ODCVM_Terminal(PAN)@m &
+      (All #a #b. OneCard()@a & OneCard()@b ==> #a = #b) &
+      (All #a #b. OneTerminal()@a & OneTerminal()@b ==> #a = #b) &
+      (All A B r #a #b. Role(A, r)@a & Role(B, r)@b ==> A = B) &
+      not (Ex A #a. Compromise(A)@a)"
 
 //proven
 lemma bank_accepts:
