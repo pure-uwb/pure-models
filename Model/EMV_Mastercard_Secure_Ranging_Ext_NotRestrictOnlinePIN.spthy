@@ -170,8 +170,7 @@ rule Card_Ext_Responds_To_Hello:
         Card_Eph_Pk = 'g'^~Card_Eph_Sk
         DH = <Card_Eph_Pk, Terminal_Eph_Pk, Terminal_Eph_Pk^~Card_Eph_Sk>
         shared_key_MAC = kdf(Terminal_Eph_Pk^~Card_Eph_Sk,'MAC_CARD_TO_READER')
-        mac = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) 
-        //TODO: add the card's public key to the MAC.
+        mac = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) // Card's public key omited
         EXT_HELLO = <'EXT_HELLO', Terminal_Eph_Pk>
     in
     [ In(EXT_HELLO),
@@ -187,7 +186,6 @@ rule Terminal_Ext_Receives_Hello:
     let
 	    shared_key_MAC = kdf(Card_Eph_Pk^~Terminal_Eph_Sk,'MAC_CARD_TO_READER')
       mac_t = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) 
-      //TODO: When adding the public key to the mac, move this verification to the SDAD verification.
 		  edht = <Terminal_Eph_Pk, ~Terminal_Eph_Sk>
 		  DH = <Card_Eph_Pk, Terminal_Eph_Pk, Card_Eph_Pk^~Terminal_Eph_Sk>
 		  EXT_HELLO = <'EXT_HELLO', Card_Eph_Pk, mac_c>
@@ -393,13 +391,12 @@ rule Card_Responds_To_GenerateAC_NoCDA:
     [ Out(<CID, ATC, AC, IAD>) ]
 
 // The DH public keys are added in the SDAD.
-//TODO: double check with papaer
 rule Card_Responds_To_GenerateAC_CDA:
     let PDOL = <amount, country, currency, date, type, UN>
         CDOL1 = <'TVR', CVM, 'HHMMSS'>
         X = <PDOL, CDOL1>
         DH = <Card_Eph_Pk, Terminal_Eph_Pk, Secret>
-        DH_AUTH = <Terminal_Eph_Pk, Card_Eph_Pk>
+        DH_AUTH = <Terminal_Eph_Pk, Card_Eph_Pk> 
         IAD = <'IAD', CID>
         AIP = <'CDA', furtherData>
         AC = MAC(f(~MK, ATC), <X, AIP, ATC, IAD>)
