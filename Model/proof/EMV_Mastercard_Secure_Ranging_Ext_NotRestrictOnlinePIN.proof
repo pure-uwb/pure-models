@@ -64158,14 +64158,7 @@ qed
 
 
 
-/*
-WARNING: the following wellformedness checks failed!
-
-Derivation Checks
-=================
-
-  Derivation checks timed out. Use --derivcheck-timeout=INT to configure timeout, 0 to deactivate.
-*/
+/* All wellformedness checks were successful. */
 
 /*
 Generated from:
