@@ -11,26 +11,19 @@ for line in sys.stdin.readlines():
   (num, goal) = line.split(": ",1)
     
   if lemma == "executable":
-    #if goal.startswith("Card_Ready"): l[3].append(num)
     if goal.startswith("!Shk( ~PAN,"): l[2].append(num)
     elif goal.startswith("!IssuingBank( ~PAN, $Bank"): l[2].append(num)
     elif goal.startswith("!AIP( ~PAN, AIP"): l[3].append(num)
     elif goal.startswith("Recv( $Terminal, $Bank,"): l[4].append(num)
     elif goal.startswith("!KU( MAC(f(~MK, ~ATC),"): l[3].append(num)
-    #elif goal.startswith("!KU( sign(<'02', $Bank,"): l[3].append(num)
-    #elif goal.startswith("Commit( 'Terminal', "): l[5].append(num)
-    #elif goal.startswith("!KU( ~"): l[8].append(num)
-    #elif goal.startswith("Commit( Bank"): l[5].append(num)
-    #elif goal.startswith("Running( ~PAN, Bank"): l[6].append(num)
-    #elif goal.startswith("Terminal_Received_AC( $Terminal, $Bank.1, $"): l[5].append(num)
-    #elif goal.startswith("!KU( sign(<'05', nc.1, 'ARQC', "): l[5].append(num)
-    #elif goal.startswith("!KU( sign(<'04', "): l[6].append(num)
-    #elif goal.startswith("!KU( MAC(f(z, "): l[7].append(num)
-    #elif goal.startswith("Bank_Commits( $Bank.1, $Terminal.1,"): l[6].append(num)
-    #elif goal.startswith("Recv( $Bank, $Terminal, <~channelID, '2'>,"): l[6].append(num)
-    #elif goal.startswith("Card_Ready_For_Cryptogram( ~PAN,") : l[6].append(num)
-    #elif goal.startswith("!KU( 'g'^~") : l[7].append(num)
-    #elif goal.startswith("Running( ~PAN, ") : l[6].append(num)
+    else: l[7].append(num)
+
+  elif lemma == "executable_ODCVM":
+    if goal.startswith("!Shk( ~PAN,"): l[2].append(num)
+    elif goal.startswith("!IssuingBank( ~PAN, $Bank"): l[2].append(num)
+    elif goal.startswith("!AIP( ~PAN, AIP"): l[3].append(num)
+    elif goal.startswith("Recv( $Terminal, $Bank,"): l[4].append(num)
+    elif goal.startswith("!KU( MAC(f(~MK, ~ATC),"): l[3].append(num)
     else: l[7].append(num)
   
   elif lemma == "secrecy_SIGMA":
@@ -51,8 +44,6 @@ for line in sys.stdin.readlines():
     elif goal.startswith("!KU( MAC(f("): l[7].append(num)
     elif goal.startswith("!KU( f("): l[8].append(num)
     elif goal.startswith("!KU( 'g'^") : l[7].append(num)
-    # elif goal.startswith("!KU( 'g'^(~Card_Eph_Sk*~Terminal_Eph_Sk)"):
-    #elif goal.startswith("!KU( sign(<'02', $Bank,"): l[3].append(num)
     elif goal.startswith("Commit( 'Terminal', ~PAN,"): l[5].append(num)
     elif goal.startswith("Commit( Bank.2, ~PAN,"): l[5].append(num)
     elif goal.startswith("Terminal_Received_AC( $Terminal, $Bank.1, $"): l[5].append(num)
@@ -71,7 +62,6 @@ for line in sys.stdin.readlines():
     elif goal.startswith("!KU( ~privk"): l[1].append(num)
     elif goal.startswith("!KU( ~Terminal_Eph_Sk") : l[1].append(num)
     elif goal.startswith("!KU( ~MK") : l[1].append(num)
-    #elif goal.startswith("!KU( 'g'^(~Card_Eph_Sk*~Terminal_Eph_Sk)") : l[4].append(num)
     elif goal.startswith("Recv("): l[3].append(num)
     elif goal.startswith("Commit"): l[3].append(num)
     elif "Commit" in goal: l[2].append(num)
@@ -100,7 +90,6 @@ for line in sys.stdin.readlines():
     elif goal.startswith("!KU( ~privk"): l[1].append(num)
     elif goal.startswith("!KU( ~Terminal_Eph_Sk") : l[1].append(num)
     elif goal.startswith("!KU( ~MK") : l[1].append(num)
-    #elif goal.startswith("!KU( 'g'^(~Card_Eph_Sk*~Terminal_Eph_Sk)") : l[4].append(num)
     elif goal.startswith("Recv("): l[3].append(num)
     elif goal.startswith("Commit"): l[3].append(num)
     elif goal.startswith("Bank_Checked_AC"): l[4].append(num)
@@ -115,8 +104,6 @@ for line in sys.stdin.readlines():
     elif goal.startswith("Running("): l[8].append(num)
     else: l[9].append(num)
 
-
-
   elif lemma.startswith("auth_to_terminal"):
     if "Visa" in goal or "CTQ" in goal or "TTQ" in goal: l[9].append(num)
     elif goal.startswith("!Running_DH") : l[1].append(num)
@@ -124,7 +111,6 @@ for line in sys.stdin.readlines():
     elif goal.startswith("!KU( ~privk"): l[1].append(num)
     elif goal.startswith("!KU( ~Terminal_Eph_Sk") : l[1].append(num)
     elif goal.startswith("!KU( ~MK") : l[1].append(num)
-    #elif goal.startswith("!KU( 'g'^(~Card_Eph_Sk*~Terminal_Eph_Sk)") : l[4].append(num)
     elif goal.startswith("Recv("): l[3].append(num)
     elif goal.startswith("Commit"): l[3].append(num)
     elif goal.startswith("Bank_Checked_AC"): l[4].append(num)

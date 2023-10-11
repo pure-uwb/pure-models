@@ -4,7 +4,7 @@ summary of summaries:
 analyzed: EMV_Mastercard_Secure_Ranging_Ext.spthy
 
   output:          EMV_Mastercard_Secure_Ranging_Ext.proof
-  processing time: 2640.09s
+  processing time: 3206.98s
 
   WARNING: 1 wellformedness check failed!
            The analysis results might be wrong!
@@ -31,12 +31,13 @@ summary of summaries:
 analyzed: EMV_Mastercard_Secure_Ranging_Ext_NotRestrictOnlinePIN.spthy
 
   output:          EMV_Mastercard_Secure_Ranging_Ext_NotRestrictOnlinePIN.proof
-  processing time: 3508.14s
+  processing time: 3866.97s
 
   WARNING: 1 wellformedness check failed!
            The analysis results might be wrong!
 
   executable (exists-trace): verified (35 steps)
+  executable_ODCVM (exists-trace): verified (37 steps)
   bank_accepts (all-traces): verified (636 steps)
   auth_to_terminal_minimal (all-traces): verified (243 steps)
   auth_to_terminal (all-traces): verified (941 steps)
@@ -52,19 +53,19 @@ analyzed: EMV_Mastercard_Secure_Ranging_Ext_NotRestrictOnlinePIN.spthy
 
 ==============================================================================
 
-
 ==============================================================================
 summary of summaries:
 
 analyzed: EMV_Mastercard_Secure_Ranging_Ext_ODCVM.spthy
 
   output:          EMV_Mastercard_Secure_Ranging_Ext_ODCVM.proof
-  processing time: 3451.55s
+  processing time: 3679.65s
 
   WARNING: 1 wellformedness check failed!
            The analysis results might be wrong!
 
   executable (exists-trace): verified (35 steps)
+  executable_ODCVM (exists-trace): verified (37 steps)
   bank_accepts (all-traces): verified (636 steps)
   auth_to_terminal_minimal (all-traces): verified (243 steps)
   auth_to_terminal (all-traces): verified (941 steps)

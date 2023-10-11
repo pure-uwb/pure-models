@@ -1182,7 +1182,7 @@ rule (modulo E) Terminal_Processes_CVM_ODCVM:
    ),
    !Value( $amount, 'High' )
    ]
-  -->
+  --[ ODCVM_Terminal( ~PAN ) ]->
    [
    Terminal_Ready_For_Cryptogram( $Terminal, ~PAN, $Bank, $CA,
                                   <$amount, country, currency, date, type, ~UN>,
@@ -1930,6 +1930,304 @@ solve( Running( PAN, 'Terminal', <'Card', 'Terminal', t> ) @ #i )
                                                                 solve( !KU( 'g'^~Terminal_Eph_Sk ) @ #vk.60 )
                                                                   case Terminal_Ext_Sends_Hello
                                                                   SOLVED // trace found
+                                                                qed
+                                                              qed
+                                                            qed
+                                                          qed
+                                                        qed
+                                                      qed
+                                                    qed
+                                                  qed
+                                                qed
+                                              qed
+                                            qed
+                                          qed
+                                        qed
+                                      qed
+                                    qed
+                                  qed
+                                qed
+                              qed
+                            qed
+                          qed
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma executable_ODCVM:
+  exists-trace
+  "∃ Bank PAN t #i #j #k #l #m.
+    ((((((((((#i < #j) ∧
+             (Running( PAN, 'Terminal', <'Card', 'Terminal', t> ) @ #i)) ∧
+            (Commit( 'Terminal', PAN, <'Card', 'Terminal', t> ) @ #j)) ∧
+           (#k < #l)) ∧
+          (Running( PAN, Bank, <'Card', 'Bank', t> ) @ #k)) ∧
+         (Commit( Bank, PAN, <'Card', 'Bank', t> ) @ #l)) ∧
+        (ODCVM_Terminal( PAN ) @ #m)) ∧
+       (∀ #a #b. ((OneCard( ) @ #a) ∧ (OneCard( ) @ #b)) ⇒ (#a = #b))) ∧
+      (∀ #a #b. ((OneTerminal( ) @ #a) ∧ (OneTerminal( ) @ #b)) ⇒ (#a = #b))) ∧
+     (∀ A B r #a #b. ((Role( A, r ) @ #a) ∧ (Role( B, r ) @ #b)) ⇒ (A = B))) ∧
+    (¬(∃ A #a. Compromise( A ) @ #a))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ Bank PAN t #i #j #k #l #m.
+  (Running( PAN, 'Terminal', <'Card', 'Terminal', t> ) @ #i) ∧
+  (Commit( 'Terminal', PAN, <'Card', 'Terminal', t> ) @ #j) ∧
+  (Running( PAN, Bank, <'Card', 'Bank', t> ) @ #k) ∧
+  (Commit( Bank, PAN, <'Card', 'Bank', t> ) @ #l) ∧
+  (ODCVM_Terminal( PAN ) @ #m)
+ ∧
+  (#i < #j) ∧
+  (#k < #l) ∧
+  (∀ #a #b. (OneCard( ) @ #a) ∧ (OneCard( ) @ #b) ⇒ #a = #b) ∧
+  (∀ #a #b. (OneTerminal( ) @ #a) ∧ (OneTerminal( ) @ #b) ⇒ #a = #b) ∧
+  (∀ A B r #a #b. (Role( A, r ) @ #a) ∧ (Role( B, r ) @ #b) ⇒ A = B) ∧
+  (∀ A #a. (Compromise( A ) @ #a) ⇒ ⊥)"
+*/
+simplify
+solve( Terminal_Ready_For_CVM( $Terminal, ~PAN, $Bank, $CA,
+                               <$amount, country, currency, date, type, ~UN>,
+                               <auth, 'ODCVM', furtherData2>, DH, pubkBank, pubkCard, CVM
+       ) ▶₀ #m )
+  case Terminal_Receives_Records_CDA_case_2
+  solve( !Value( $amount, 'High' ) ▶₁ #m )
+    case Generate_Amount_High
+    solve( Running( ~PAN, 'Terminal', <'Card', 'Terminal', t> ) @ #i )
+      case Card_Responds_To_GenerateAC_CDA
+      solve( !Shk( ~PAN, ~MK ) ▶₃ #i )
+        case Create_Card
+        solve( !IssuingBank( ~PAN, $Bank ) ▶₄ #i )
+          case Create_Card
+          solve( Card_Ready_For_Cryptogram( ~PAN,
+                                            <amount, country, currency, date, type, UN>, ATC,
+                                            <Card_Eph_Pk, Terminal_Eph_Pk, Secret>
+                 ) ▶₀ #i )
+            case Card_Responds_To_ReadRecord_NotDDA_case_2
+            solve( !LtkCard( ~PAN, ~privkCard ) ▶₁ #i )
+              case Set_Records_NotSDA
+              solve( !AIP( ~PAN, <'CDA', furtherData> ) ▶₂ #i )
+                case Create_Card
+                solve( Commit( 'Terminal', ~PAN,
+                               <'Card', 'Terminal', ~PAN, <'CDA', 'ODCVM', $furtherData>, CVM, 
+                                <<amount, country, currency, date, type, UN>, 'TVR', CVM, 'HHMMSS'>, 
+                                ~ATC, <'g'^~Card_Eph_Sk, Terminal_Eph_Pk, Secret>, 
+                                MAC(f(~MK, ~ATC),
+                                    <<<amount, country, currency, date, type, UN>, 'TVR', CVM, 'HHMMSS'>, 
+                                     <'CDA', 'ODCVM', $furtherData>, ~ATC, 'IAD', CID>), 
+                                'IAD', CID>
+                       ) @ #j )
+                  case Terminal_Commits_ARQC
+                  solve( Terminal_Received_AC( $Terminal, $Bank.1, $CA, nc.1, 'ARQC',
+                                               <~PAN, <'CDA', 'ODCVM', $furtherData>, CVM, 
+                                                <<$amount, country, currency, date, type, ~UN>, 'TVR', CVM, 
+                                                 'HHMMSS'>, 
+                                                ~ATC, <'g'^~Card_Eph_Sk, Terminal_Eph_Pk, Secret>, 
+                                                MAC(f(~MK, ~ATC),
+                                                    <
+                                                     <<$amount, country, currency, date, type, ~UN>, 'TVR', 
+                                                      CVM, 'HHMMSS'>, 
+                                                     <'CDA', 'ODCVM', $furtherData>, ~ATC, 'IAD', CID>), 
+                                                'IAD', CID>,
+                                               supportedCVM, ~channelID
+                         ) ▶₀ #j )
+                    case Terminal_Receives_AC_CDA
+                    solve( !KU( MAC(f(~MK, ~ATC),
+                                    <
+                                     <<$amount, 'Switzerland', 'CHF', 'YYMMDD', 'Purchase', ~UN>, 'TVR', 
+                                      'ODCVM', 'HHMMSS'>, 
+                                     <'CDA', 'ODCVM', $furtherData>, ~ATC, 'IAD', CID>)
+                           ) @ #vk.72 )
+                      case Card_Responds_To_GenerateAC_CDA
+                      solve( !Value( $amount, 'High' ) ▶₁ #j )
+                        case Generate_Amount_High
+                        solve( Recv( $Bank, $Terminal, <~channelID, 'Mastercard', '2'>,
+                                     <'ARC', ARPC>
+                               ) ▶₂ #j )
+                          case Terminal_Bank_Network_case_1
+                          solve( Running( ~PAN, Bank.1,
+                                          <'Card', 'Bank', ~PAN, <'CDA', 'ODCVM', $furtherData>, 'ODCVM', 
+                                           <<$amount, 'Switzerland', 'CHF', 'YYMMDD', 'Purchase', ~UN>, 
+                                            'TVR', 'ODCVM', 'HHMMSS'>, 
+                                           ~ATC, 
+                                           <'g'^~Card_Eph_Sk, 'g'^~Terminal_Eph_Sk, 
+                                            'g'^(~Card_Eph_Sk*~Terminal_Eph_Sk)>, 
+                                           MAC(f(~MK, ~ATC),
+                                               <
+                                                <<$amount, 'Switzerland', 'CHF', 'YYMMDD', 'Purchase', ~UN>, 
+                                                 'TVR', 'ODCVM', 'HHMMSS'>, 
+                                                <'CDA', 'ODCVM', $furtherData>, ~ATC, 'IAD', CID>), 
+                                           'IAD', CID>
+                                 ) @ #k )
+                            case Card_Responds_To_GenerateAC_CDA
+                            solve( !Shk( ~PAN, ~MK ) ▶₃ #k )
+                              case Create_Card
+                              solve( !IssuingBank( ~PAN, $Bank.1 ) ▶₄ #k )
+                                case Create_Card
+                                solve( Card_Ready_For_Cryptogram( ~PAN,
+                                                                  <$amount, 'Switzerland', 'CHF', 'YYMMDD', 
+                                                                   'Purchase', ~UN>,
+                                                                  ~ATC,
+                                                                  <'g'^~Card_Eph_Sk, 'g'^~Terminal_Eph_Sk, 
+                                                                   'g'^(~Card_Eph_Sk*~Terminal_Eph_Sk)>
+                                       ) ▶₀ #k )
+                                  case Card_Responds_To_ReadRecord_NotDDA
+                                  solve( Commit( $Bank, ~PAN,
+                                                 <'Card', 'Bank', ~PAN, <'CDA', 'ODCVM', $furtherData>, 
+                                                  'ODCVM', 
+                                                  <
+                                                   <$amount, 'Switzerland', 'CHF', 'YYMMDD', 'Purchase', ~UN
+                                                   >, 
+                                                   'TVR', 'ODCVM', 'HHMMSS'>, 
+                                                  ~ATC, 
+                                                  <'g'^~Card_Eph_Sk, 'g'^~Terminal_Eph_Sk, 
+                                                   'g'^(~Card_Eph_Sk*~Terminal_Eph_Sk)>, 
+                                                  MAC(f(~MK, ~ATC),
+                                                      <
+                                                       <
+                                                        <$amount, 'Switzerland', 'CHF', 'YYMMDD', 'Purchase', 
+                                                         ~UN>, 
+                                                        'TVR', 'ODCVM', 'HHMMSS'>, 
+                                                       <'CDA', 'ODCVM', $furtherData>, ~ATC, 'IAD', CID>), 
+                                                  'IAD', CID>
+                                         ) @ #l )
+                                    case Bank_Commits
+                                    solve( Bank_Commits( $Bank, $Terminal.1,
+                                                         <~PAN, <'CDA', 'ODCVM', $furtherData>, 'ODCVM', 
+                                                          <
+                                                           <$amount, 'Switzerland', 'CHF', 'YYMMDD', 
+                                                            'Purchase', ~UN>, 
+                                                           'TVR', 'ODCVM', 'HHMMSS'>, 
+                                                          ~ATC, 
+                                                          <'g'^~Card_Eph_Sk, 'g'^~Terminal_Eph_Sk, 
+                                                           'g'^(~Card_Eph_Sk*~Terminal_Eph_Sk)>, 
+                                                          MAC(f(~MK, ~ATC),
+                                                              <
+                                                               <
+                                                                <$amount, 'Switzerland', 'CHF', 'YYMMDD', 
+                                                                 'Purchase', ~UN>, 
+                                                                'TVR', 'ODCVM', 'HHMMSS'>, 
+                                                               <'CDA', 'ODCVM', $furtherData>, ~ATC, 'IAD', 
+                                                               CID>), 
+                                                          'IAD', CID>,
+                                                         channelID.1, ARPC.1
+                                           ) ▶₀ #l )
+                                      case Bank_Processes_CVM_NotOnlinePIN
+                                      solve( !Value( $amount, 'High' ) ▶₁ #l )
+                                        case Generate_Amount_High
+                                        solve( !IssuingCA( $Bank, $CA.1 ) ▶₂ #l )
+                                          case Create_Bank
+                                          solve( !KU( sign(<'02', $Bank, pk(x), $CA>, ~privkCA) ) @ #vk.24 )
+                                            case Card_Responds_To_ReadRecord_NotDDA
+                                            solve( !KU( sign(<'04', ~PAN, pk(x), $Bank, supportedCVM, 'CDA', 
+                                                              'ODCVM', $furtherData>,
+                                                             ~privkBank)
+                                                   ) @ #vk.37 )
+                                              case Card_Responds_To_ReadRecord_NotDDA
+                                              solve( !KU( sign(<'05', nc.1, 'ARQC', 
+                                                                MAC(f(~MK, ~ATC),
+                                                                    <
+                                                                     <
+                                                                      <$amount, 'Switzerland', 'CHF', 
+                                                                       'YYMMDD', 'Purchase', ~UN>, 
+                                                                      'TVR', 'ODCVM', 'HHMMSS'>, 
+                                                                     <'CDA', 'ODCVM', $furtherData>, ~ATC, 
+                                                                     'IAD', CID>), 
+                                                                h(<
+                                                                   <
+                                                                    <$amount, 'Switzerland', 'CHF', 'YYMMDD', 
+                                                                     'Purchase', ~UN>, 
+                                                                    'TVR', 'ODCVM', 'HHMMSS'>, 
+                                                                   'ARQC', ~ATC, 
+                                                                   MAC(f(~MK, ~ATC),
+                                                                       <
+                                                                        <
+                                                                         <$amount, 'Switzerland', 'CHF', 
+                                                                          'YYMMDD', 'Purchase', ~UN>, 
+                                                                         'TVR', 'ODCVM', 'HHMMSS'>, 
+                                                                        <'CDA', 'ODCVM', $furtherData>, ~ATC, 
+                                                                        'IAD', CID>), 
+                                                                   <'IAD', CID>, 'g'^~Terminal_Eph_Sk, 
+                                                                   'g'^~Card_Eph_Sk>), 
+                                                                ~UN>,
+                                                               ~privkCard)
+                                                     ) @ #vk.75 )
+                                                case Card_Responds_To_GenerateAC_CDA
+                                                solve( Bank_Checked_AC( $Bank, $Terminal,
+                                                                        <~PAN.1, <'CDA', furtherData.1>, 
+                                                                         CVM.1, 
+                                                                         <
+                                                                          <$amount.1, country, currency, 
+                                                                           date, type, UN.1>, 
+                                                                          CDOL1>, 
+                                                                         ATC.1, DH, AC, IAD>,
+                                                                        'Null', ~channelID, ARPC
+                                                       ) ▶₀ #vr.21 )
+                                                  case Bank_Receives_AC
+                                                  solve( Bank_Checked_AC( $Bank, $Terminal.1,
+                                                                          <~PAN, 
+                                                                           <'CDA', 'ODCVM', $furtherData>, 
+                                                                           'ODCVM', 
+                                                                           <
+                                                                            <$amount, 'Switzerland', 'CHF', 
+                                                                             'YYMMDD', 'Purchase', ~UN>, 
+                                                                            'TVR', 'ODCVM', 'HHMMSS'>, 
+                                                                           ~ATC, 
+                                                                           <'g'^~Card_Eph_Sk, 
+                                                                            'g'^~Terminal_Eph_Sk, 
+                                                                            'g'^(~Card_Eph_Sk*~Terminal_Eph_Sk
+                                                                                )
+                                                                           >, 
+                                                                           MAC(f(~MK, ~ATC),
+                                                                               <
+                                                                                <
+                                                                                 <$amount, 'Switzerland', 
+                                                                                  'CHF', 'YYMMDD', 
+                                                                                  'Purchase', ~UN>, 
+                                                                                 'TVR', 'ODCVM', 'HHMMSS'>, 
+                                                                                <'CDA', 'ODCVM', $furtherData
+                                                                                >, 
+                                                                                ~ATC, 'IAD', 'ARQC'>), 
+                                                                           'IAD', 'ARQC'>,
+                                                                          'Null', channelID.1, ARPC
+                                                         ) ▶₀ #vr.22 )
+                                                    case Bank_Receives_AC
+                                                    solve( !KU( ~PAN ) @ #vk.16 )
+                                                      case Card_Responds_To_ReadRecord_NotDDA_case_1
+                                                      solve( !KU( ~UN ) @ #vk.72 )
+                                                        case Terminal_Sends_GPO
+                                                        solve( !KU( ~ATC ) @ #vk.73 )
+                                                          case Card_Responds_To_GenerateAC_CDA
+                                                          solve( !KU( ~nc ) @ #vk.74 )
+                                                            case Card_Responds_To_GenerateAC_CDA
+                                                            solve( !KU( pk(~privkBank) ) @ #vk.34 )
+                                                              case Card_Responds_To_ReadRecord_NotDDA
+                                                              solve( !KU( MAC(kdf('g'^(~Card_Eph_Sk*
+                                                                                       ~Terminal_Eph_Sk),
+                                                                                  'MAC_CARD_TO_READER'),
+                                                                              <'g'^~Terminal_Eph_Sk, 
+                                                                               'g'^~Card_Eph_Sk>)
+                                                                     ) @ #vk.55 )
+                                                                case Card_Ext_Responds_To_Hello
+                                                                solve( !KU( pk(~privkCard) ) @ #vk.40 )
+                                                                  case Card_Responds_To_ReadRecord_NotDDA
+                                                                  solve( !KU( 'g'^~Card_Eph_Sk ) @ #vk.55 )
+                                                                    case Card_Ext_Responds_To_Hello
+                                                                    solve( !KU( 'g'^~Terminal_Eph_Sk
+                                                                           ) @ #vk.68 )
+                                                                      case Terminal_Ext_Sends_Hello
+                                                                      SOLVED // trace found
+                                                                    qed
+                                                                  qed
                                                                 qed
                                                               qed
                                                             qed
