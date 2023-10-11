@@ -31,10 +31,7 @@ summary of summaries:
 analyzed: EMV_Mastercard_Secure_Ranging_Ext_NotRestrictOnlinePIN.spthy
 
   output:          EMV_Mastercard_Secure_Ranging_Ext_NotRestrictOnlinePIN.proof
-  processing time: 3866.97s
-
-  WARNING: 1 wellformedness check failed!
-           The analysis results might be wrong!
+  processing time: 3557.63s
 
   executable (exists-trace): verified (35 steps)
   executable_ODCVM (exists-trace): verified (37 steps)
@@ -63,6 +60,34 @@ analyzed: EMV_Mastercard_Secure_Ranging_Ext_ODCVM.spthy
 
   WARNING: 1 wellformedness check failed!
            The analysis results might be wrong!
+
+  executable (exists-trace): verified (35 steps)
+  executable_ODCVM (exists-trace): verified (37 steps)
+  bank_accepts (all-traces): verified (636 steps)
+  auth_to_terminal_minimal (all-traces): verified (243 steps)
+  auth_to_terminal (all-traces): verified (941 steps)
+  auth_to_terminal_minimal_dh (all-traces): verified (163 steps)
+  auth_to_terminal_dh (all-traces): verified (2367 steps)
+  auth_to_bank_minimal (all-traces): verified (150 steps)
+  auth_to_bank (all-traces): verified (849 steps)
+  secrecy_MK (all-traces): verified (6 steps)
+  secrecy_privkCard (all-traces): verified (7 steps)
+  secrecy_PIN (all-traces): verified (3 steps)
+  secrecy_PAN (all-traces): falsified - found trace (7 steps)
+  secrecy_SIGMA (all-traces): verified (10051 steps)
+
+==============================================================================
+
+
+Model to Publish (same as EMV_Mastercard_Secure_Ranging_Ext_NotRestrictOnlinePIN.spthy)
+
+==============================================================================
+summary of summaries:
+
+analyzed: EMV_Mastercard_Secure_Ranging_Ext.spthy
+
+  output:          EMV_Mastercard_Secure_Ranging_Ext.proof
+  processing time: 3572.54s
 
   executable (exists-trace): verified (35 steps)
   executable_ODCVM (exists-trace): verified (37 steps)
