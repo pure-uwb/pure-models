@@ -6,11 +6,11 @@ The Tamarin models are based on the [EMV models](https://github.com/EMVrace/EMVe
 ## Files
 - EMV_Mastercard_SecureRanging_Ext.spthy: The Tamarin model of the Mastercard kernel with the PURE extension
 - EMV_Mastercard_SecureRanging_Ext.proof: The proof of the above model
-- Mastercard.oracle: Proof-suport oracle
+- Mastercard.oracle: Proof-support oracle
 
 ## Modifications
 The model is based on the EMV contactless model by Basin et al. 
-Their model contains the Visa and Mastercard kernel and allows for different Offline Data Authentication, Transaction Authorization, and Cardholder verification methods.
+Their model contains the Visa and Mastercard kernel and allows for different Offline Data Authentication, Transaction Authorization, and Cardholder Verification methods.
 This allows for different configurations that can be verified individually in the presence of other configurations.
 
 We base our model on one configuration, namely the Mastercard kernel with CDA and a high transaction value.
