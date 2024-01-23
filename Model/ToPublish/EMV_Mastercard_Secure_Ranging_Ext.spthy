@@ -170,7 +170,6 @@ rule Card_Ext_Responds_To_Hello:
         Card_Eph_Pk = 'g'^~Card_Eph_Sk
         DH = <Card_Eph_Pk, Terminal_Eph_Pk, Terminal_Eph_Pk^~Card_Eph_Sk>
         shared_key_MAC = kdf(Terminal_Eph_Pk^~Card_Eph_Sk,'MAC_CARD_TO_READER')
-        shared_key_Range = kdf(Terminal_Eph_Pk^~Card_Eph_Sk, 'Range')
         mac = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) // Card's public key omited
         EXT_HELLO = <'EXT_HELLO', Terminal_Eph_Pk>
     in
@@ -180,13 +179,12 @@ rule Card_Ext_Responds_To_Hello:
     ]
   -->
     [ Out( <'EXT_HELLO', Card_Eph_Pk, mac>),
-      Card_Responded_To_Hello( ~PAN, PDOL, ATC, DH, shared_key_Range)
+      Card_Responded_To_Hello( ~PAN, PDOL, ATC, DH)
     ]
 
 rule Terminal_Ext_Receives_Hello:
     let
 	    shared_key_MAC = kdf(Card_Eph_Pk^~Terminal_Eph_Sk,'MAC_CARD_TO_READER')
-      shared_key_Range = kdf(Card_Eph_Pk^~Terminal_Eph_Sk, 'Range')
       mac_t = MAC(shared_key_MAC, <Terminal_Eph_Pk, Card_Eph_Pk>) 
 		  edht = <Terminal_Eph_Pk, ~Terminal_Eph_Sk>
 		  DH = <Card_Eph_Pk, Terminal_Eph_Pk, Card_Eph_Pk^~Terminal_Eph_Sk>
@@ -198,55 +196,49 @@ rule Terminal_Ext_Receives_Hello:
   --[ Eq(mac_c,mac_t)
     , Terminal_Ext_Sent_Hello_dgb($Terminal, PDOL, AIP, edht)
     ]->
-    [ Terminal_Ext_Received_Hello( $Terminal, PDOL, AIP, DH, shared_key_Range) ]  
+    [ Terminal_Ext_Received_Hello( $Terminal, PDOL, AIP, DH) ]  
        
 //Terminal and Card perform ranging
-rule Ranging_Sucess:
-    [ Card_Responded_To_Hello( ~PAN_c, PDOL_c, ATC_c, DH_c, shared_key_Range_c ),
-      Terminal_Ext_Received_Hello( $Terminal_t, PDOL_t, AIP_t, DH_t, shared_key_Range_t),
-      Fr(~d), Fr(~t) ]
-  --[ Eq(shared_key_Range_c, shared_key_Range_t)
-    ]->
-    [ Card_Performed_Ranging( ~PAN_c, PDOL_c, ATC_c, DH_c, ~d, ~t),
-      Terminal_Performed_Ranging( $Terminal_t, PDOL_t, AIP_t, DH_t, ~d, ~t) ]
+rule Card_Ranging:
+    [ Card_Responded_To_Hello( ~PAN_c, PDOL_c, ATC_c, DH_c ),
+      Fr(~t) ]
+  -->
+    [ Card_Performed_Ranging( ~PAN_c, PDOL_c, ATC_c, DH_c, ~t),
+      Out(~t) ]
 
-rule Ranging_Fail:
-    [ Card_Responded_To_Hello( ~PAN_c, PDOL_c, ATC_c, DH_c, shared_key_Range_c),
-      Terminal_Ext_Received_Hello( $Terminal_t, PDOL_t, AIP_t, DH_t, shared_key_Range_t),
-      Fr(~d_c), Fr(~d_t),
-      Fr(~t_c), Fr(~t_t) ]
-  --[
-    ]->
-    [ Card_Performed_Ranging( ~PAN_c, PDOL_c, ATC_c, DH_c, ~d_c, ~t_c),
-      Terminal_Performed_Ranging( $Terminal_t, PDOL_t, AIP_t, DH_t, ~d_t, ~t_t) ]
+rule Terminal_Ranging:
+    [ Terminal_Ext_Received_Hello( $Terminal_t, PDOL_t, AIP_t, DH_t),
+      In(t) ]
+  -->
+    [ Terminal_Performed_Ranging( $Terminal_t, PDOL_t, AIP_t, DH_t, t) ]
 
 //-------- END NEW DH_SIGMA ----------------    
 
 // ------- Adaptions -------
 
 rule Terminal_Sends_ReadRecord:
-    [ Terminal_Performed_Ranging( $Terminal, PDOL, AIP, DH, d, t) ]
+    [ Terminal_Performed_Ranging( $Terminal, PDOL, AIP, DH, t) ]
   -->
     [ Out(<'READ_RECORD', 'AFL'>),
-      Terminal_Sent_ReadRecord($Terminal, PDOL, AIP, DH, d, t) ]
+      Terminal_Sent_ReadRecord($Terminal, PDOL, AIP, DH, t) ]
 
 rule Card_Responds_To_ReadRecord_NotDDA:
-    [ Card_Performed_Ranging(~PAN, PDOL, ATC, DH, d, t),
+    [ Card_Performed_Ranging(~PAN, PDOL, ATC, DH, t),
       !AIP(~PAN, AIP),
       !Records(~PAN, records),
       In(<'READ_RECORD', 'AFL'>) ]
   --[ NEq(fst(AIP), 'DDA') ]->
     [ Out(records),
-      Card_Ready_For_Cryptogram(~PAN, PDOL, ATC, DH, d, t) ]
+      Card_Ready_For_Cryptogram(~PAN, PDOL, ATC, DH, t) ]
 
 rule Card_Responds_To_ReadRecord_DDA:
-    [ Card_Performed_Ranging(~PAN, PDOL, ATC, DH, d, t),
+    [ Card_Performed_Ranging(~PAN, PDOL, ATC, DH, t),
       !Records(~PAN, records),
       !AIP(~PAN, <'DDA', furtherData>),
       In(<'READ_RECORD', 'AFL'>) ]
   -->
     [ Out(records),
-      Card_Ready_For_DDA(~PAN, PDOL, ATC, DH, d, t) ]
+      Card_Ready_For_DDA(~PAN, PDOL, ATC, DH, t) ]
  
 rule Terminal_Receives_Records_SDA:
     let AIP = <'SDA', furtherData>
@@ -254,7 +246,7 @@ rule Terminal_Receives_Records_SDA:
                    <<'02', $Bank, pubkBank, $CA>, sign2>,
                    SSAD, CVM>
     in
-    [ Terminal_Sent_ReadRecord($Terminal, PDOL, AIP, DH, d, t),
+    [ Terminal_Sent_ReadRecord($Terminal, PDOL, AIP, DH, t),
       In(records),
       !IssuingCA($Bank, $CA),
       !CertCA($CA, <<'01', $CA, pubkCA, $CA>, sign1>) ]
@@ -264,7 +256,7 @@ rule Terminal_Receives_Records_SDA:
       Eq( verify(SSAD, <'03', ~PAN, expDate, AIP>, pubkBank), true)
     ]->
     [ Terminal_Ready_For_CVM($Terminal, ~PAN, $Bank, $CA,
-        PDOL, AIP, DH, pubkBank, 'Null', CVM, d, t) ]
+        PDOL, AIP, DH, pubkBank, 'Null', CVM, t) ]
 
 rule Terminal_Receives_Records_CDA:
     let AIP = <'CDA', furtherData>
@@ -273,7 +265,7 @@ rule Terminal_Receives_Records_CDA:
                    <<'04', ~PAN, pubkCard, $Bank, CVM, AIP>, sign3>,
                    CVM>
     in
-    [ Terminal_Sent_ReadRecord($Terminal, PDOL, AIP, DH, d, t),
+    [ Terminal_Sent_ReadRecord($Terminal, PDOL, AIP, DH, t),
       In(records),
       !IssuingCA($Bank, $CA),
       !CertCA($CA, <<'01', $CA, pubkCA, $CA>, sign1>) ]
@@ -283,7 +275,7 @@ rule Terminal_Receives_Records_CDA:
       Eq( verify(sign3, <'04', ~PAN, pubkCard, $Bank, CVM, AIP>, pubkBank), true)
     ]->
     [ Terminal_Ready_For_CVM($Terminal, ~PAN, $Bank, $CA,
-        PDOL, AIP, DH, pubkBank, pubkCard, CVM, d, t) ]
+        PDOL, AIP, DH, pubkBank, pubkCard, CVM, t) ]
 
 rule Terminal_Receives_Records_DDA:
     let AIP = <'DDA', furtherData>
@@ -292,7 +284,7 @@ rule Terminal_Receives_Records_DDA:
                    <<'04', ~PAN, pubkCard, $Bank, CVM, AIP>, sign3>,
                    CVM>
     in
-    [ Terminal_Sent_ReadRecord($Terminal, PDOL, AIP, DH, d, t),
+    [ Terminal_Sent_ReadRecord($Terminal, PDOL, AIP, DH, t),
       !IssuingCA($Bank, $CA),
       In(records),
       !CertCA($CA, <<'01', $CA, pubkCA, $CA>, sign1>) ]
@@ -302,83 +294,83 @@ rule Terminal_Receives_Records_DDA:
       Eq( verify(sign3,<'04', ~PAN, pubkCard, $Bank, CVM, AIP>, pubkBank), true)
     ]->
     [ Terminal_Ready_For_DDA($Terminal, ~PAN, $Bank, $CA,
-        PDOL, AIP, DH, pubkBank, pubkCard, CVM, d, t) ]
+        PDOL, AIP, DH, pubkBank, pubkCard, CVM, t) ]
 
 rule Terminal_Sends_InternalAuthenticate:
     let PDOL = <$amount, country, currency, date, type, ~UN>
         DDOL = ~UN
     in
     [ Terminal_Ready_For_DDA($Terminal, ~PAN, $Bank, $CA,
-        PDOL, AIP, DH, pubkBank, pubkCard, CVM, d, t) ]
+        PDOL, AIP, DH, pubkBank, pubkCard, CVM, t) ]
   -->
     [ Out( <'INTERNAL_AUTHENTICATE', DDOL> ),
       Terminal_Sent_InternalAuthenticate($Terminal, ~PAN, $Bank, $CA,
-        PDOL, AIP, DH, pubkBank, pubkCard, CVM, d, t) ]
+        PDOL, AIP, DH, pubkBank, pubkCard, CVM, t) ]
 
 rule Card_Responds_To_InternalAuthenticate:
-    [ Card_Ready_For_DDA(~PAN, PDOL, ATC, DH, d, t),
+    [ Card_Ready_For_DDA(~PAN, PDOL, ATC, DH, t),
       Fr(~nc),
       !LtkCard(~PAN, ~privkCard),
       In( <'INTERNAL_AUTHENTICATE', DDOL> ) ]
   -->
     [ Out( <~nc, sign{'05', ~nc, DDOL}~privkCard> ),
-      Card_Ready_For_Cryptogram(~PAN, PDOL, ATC, DH, d, t) ]
+      Card_Ready_For_Cryptogram(~PAN, PDOL, ATC, DH, t) ]
 
 rule Terminal_Receives_InternalAuthenticate_Response:
     let PDOL = <$amount, country, currency, date, type, ~UN>
     in
     [ Terminal_Sent_InternalAuthenticate($Terminal, ~PAN, $Bank, $CA, PDOL,
-        AIP, DH, pubkBank, pubkCard, CVM, d, t),
+        AIP, DH, pubkBank, pubkCard, CVM, t),
       In(<nc, SDAD>) ]
   --[
       Eq( verify(SDAD, <'05', nc, ~UN>, pubkCard), true) ]->
     [ Terminal_Ready_For_CVM($Terminal, ~PAN, $Bank, $CA,
-        PDOL, AIP, DH, pubkBank, pubkCard, CVM, d, t) ]
+        PDOL, AIP, DH, pubkBank, pubkCard, CVM, t) ]
 
 rule Terminal_Processes_CVM_NoPIN:
     let PDOL = <$amount, country, currency, date, type, ~UN>
     in
     [ Terminal_Ready_For_CVM($Terminal, ~PAN, $Bank, $CA, PDOL,
-        AIP, DH, pubkBank, pubkCard, CVM, d, t),
+        AIP, DH, pubkBank, pubkCard, CVM, t),
       !Value($amount, 'Low') ]
   -->
     [ Terminal_Ready_For_Cryptogram($Terminal, ~PAN, $Bank, $CA, PDOL,
-        AIP, DH, pubkBank, pubkCard, 'NoPIN', 'Null', CVM, d, t) ]
+        AIP, DH, pubkBank, pubkCard, 'NoPIN', 'Null', CVM, t) ]
 
 rule Terminal_Processes_CVM_OnlinePIN:
     let PDOL = <$amount, country, currency, date, type, ~UN>
         encPIN = aenc{PIN}pubkBank
     in
     [ Terminal_Ready_For_CVM($Terminal, ~PAN, $Bank, $CA, PDOL,
-        AIP, DH, pubkBank, pubkCard, 'OnlinePIN', d, t),
+        AIP, DH, pubkBank, pubkCard, 'OnlinePIN', t),
       !Entered_PIN(~PAN, PIN),
       !Value($amount, 'High') ]
   -->
     [ Terminal_Ready_For_Cryptogram($Terminal, ~PAN, $Bank, $CA,
-        PDOL, AIP, DH, pubkBank, pubkCard, 'OnlinePIN', encPIN, 'OnlinePIN', d, t) ]
+        PDOL, AIP, DH, pubkBank, pubkCard, 'OnlinePIN', encPIN, 'OnlinePIN', t) ]
 
 rule Terminal_Processes_CVM_ODCVM:
     let PDOL = <$amount, country, currency, date, type, ~UN>
         AIP = <auth, <'ODCVM', furtherData2>>
     in
     [ Terminal_Ready_For_CVM($Terminal, ~PAN, $Bank, $CA, PDOL,
-        AIP, DH, pubkBank, pubkCard, CVM, d, t),
+        AIP, DH, pubkBank, pubkCard, CVM, t),
       !Value($amount, 'High') ]
   --[ ODCVM_Terminal(~PAN) ]->
     [ Terminal_Ready_For_Cryptogram($Terminal, ~PAN, $Bank, $CA, PDOL,
-        AIP, DH, pubkBank, pubkCard, 'ODCVM', 'Null', CVM, d, t) ]
+        AIP, DH, pubkBank, pubkCard, 'ODCVM', 'Null', CVM, t) ]
 
 rule Terminal_Sends_GenerateAC_NoCDA:
     let CDOL1 = <'TVR', CVM, 'HHMMSS'>
         X = <PDOL, CDOL1>
     in
     [ Terminal_Ready_For_Cryptogram($Terminal, ~PAN, $Bank, $CA, PDOL,
-        AIP, DH, pubkBank, pubkCard, CVM, encPIN, supportedCVM, d, t),
+        AIP, DH, pubkBank, pubkCard, CVM, encPIN, supportedCVM, t),
       In(acType) ]
   --[ NEq(fst(AIP), 'CDA') ]->
     [ Out(< 'GENERATE_AC', acType, 'NoCDA', CDOL1 >),
       Terminal_Sent_GenerateAC_NoCDA($Terminal, ~PAN, $Bank, $CA,
-        X, AIP, DH, pubkBank, pubkCard, CVM, encPIN, acType, supportedCVM, d, t) ]
+        X, AIP, DH, pubkBank, pubkCard, CVM, encPIN, acType, supportedCVM, t) ]
 
 rule Terminal_Sends_GenerateAC_CDA:
     let CDOL1 = <'TVR', CVM, 'HHMMSS'>
@@ -386,12 +378,12 @@ rule Terminal_Sends_GenerateAC_CDA:
         AIP = <'CDA', furtherData>
     in
     [ Terminal_Ready_For_Cryptogram($Terminal, ~PAN, $Bank, $CA,
-        PDOL, AIP, DH, pubkBank, pubkCard, CVM, encPIN, supportedCVM, d, t),
+        PDOL, AIP, DH, pubkBank, pubkCard, CVM, encPIN, supportedCVM, t),
       In(acType) ]
   -->
     [ Out(< 'GENERATE_AC', acType, 'CDA', CDOL1 >),
       Terminal_Sent_GenerateAC_CDA($Terminal, ~PAN, $Bank, $CA,
-        X, AIP, DH, pubkBank, pubkCard, CVM, encPIN, acType, supportedCVM, d, t) ]
+        X, AIP, DH, pubkBank, pubkCard, CVM, encPIN, acType, supportedCVM, t) ]
 
 // Note AC does not contain DH
 rule Card_Responds_To_GenerateAC_NoCDA:
@@ -399,9 +391,9 @@ rule Card_Responds_To_GenerateAC_NoCDA:
         X = <PDOL, CDOL1>
         IAD = <'IAD', CID>
         AC = MAC(f(~MK, ATC), <X, AIP, ATC, IAD>)
-        transaction = <~PAN, AIP, CVM, X, ATC, DH, d, t, AC, IAD>
+        transaction = <~PAN, AIP, CVM, X, ATC, DH, t, AC, IAD>
     in
-    [ Card_Ready_For_Cryptogram(~PAN, PDOL, ATC, DH, d, t),
+    [ Card_Ready_For_Cryptogram(~PAN, PDOL, ATC, DH, t),
       !AIP(~PAN, AIP),
       !Shk(~PAN, ~MK),
       !IssuingBank(~PAN, $Bank),
@@ -423,9 +415,9 @@ rule Card_Responds_To_GenerateAC_CDA:
         AC = MAC(f(~MK, ATC), <X, AIP, ATC, IAD>)
         T = h(<X, CID, ATC, AC, IAD, DH_AUTH, t>)
         SDAD = sign{'05', ~nc, CID, AC, T, UN}~privkCard
-        transaction = <~PAN, AIP, CVM, X, ATC, DH, d, t, AC, IAD>
+        transaction = <~PAN, AIP, CVM, X, ATC, DH, t, AC, IAD>
     in
-    [ Card_Ready_For_Cryptogram(~PAN, PDOL, ATC, DH, d, t),
+    [ Card_Ready_For_Cryptogram(~PAN, PDOL, ATC, DH, t),
       !LtkCard(~PAN, ~privkCard),
       !AIP(~PAN, AIP),
       !Shk(~PAN, ~MK),
@@ -439,17 +431,17 @@ rule Card_Responds_To_GenerateAC_CDA:
 
 rule Terminal_Receives_AC_NoCDA:
     let X = <PDOL, CDOL1>
-        transaction = <~PAN, AIP, CVM, X, ATC, DH, d, t, AC, IAD>
+        transaction = <~PAN, AIP, CVM, X, ATC, DH, t, AC, IAD>
     in
     [ Terminal_Sent_GenerateAC_NoCDA($Terminal, ~PAN, $Bank, $CA,
-        X, DH, AIP, pubkBank, pubkCard, CVM, encPIN, acType, supportedCVM, d, t),
+        X, DH, AIP, pubkBank, pubkCard, CVM, encPIN, acType, supportedCVM, t),
       In(<CID, ATC, AC, IAD>),
       Fr(~channelID) ]
   --[ Compatible_CID_acType(CID, acType),
       Compatible_CID_CVM(CID, CVM),
       Running($Terminal, $Bank, <'Terminal', 'Bank', transaction>) ]->
     [ Terminal_Received_AC($Terminal, $Bank, $CA,
-        'Null', CID, transaction, supportedCVM, ~channelID, d, t),
+        'Null', CID, transaction, supportedCVM, ~channelID, t),
       Send($Terminal, $Bank, <~channelID, 'Mastercard', '1'>,
         <transaction, encPIN>) ]
 
@@ -459,10 +451,10 @@ rule Terminal_Receives_AC_CDA:
         DH = <Card_Eph_Pk, Terminal_Eph_Pk, Secret>
         DH_AUTH = <Terminal_Eph_Pk, Card_Eph_Pk>
         T = h(<X, CID, ATC, AC, IAD, DH_AUTH, t>)
-        transaction = <~PAN, AIP, CVM, X, ATC, DH, d, t, AC, IAD>
+        transaction = <~PAN, AIP, CVM, X, ATC, DH, t, AC, IAD>
     in
     [ Terminal_Sent_GenerateAC_CDA($Terminal, ~PAN, $Bank, $CA,
-        X, AIP, DH, pubkBank, pubkCard, CVM, encPIN, acType, supportedCVM, d, t),
+        X, AIP, DH, pubkBank, pubkCard, CVM, encPIN, acType, supportedCVM, t),
       In(<CID, ATC, AC, <nc, SDAD>, IAD>),
       Fr(~channelID) ]
   --[ Compatible_CID_acType(CID, acType),
@@ -470,7 +462,7 @@ rule Terminal_Receives_AC_CDA:
       Eq( verify(SDAD, <'05', nc, CID, AC, T, ~UN>, pubkCard), true ),
       Running($Terminal, $Bank, <'Terminal', 'Bank', transaction>) ]->
     [ Terminal_Received_AC($Terminal, $Bank, $CA,
-        nc, CID, transaction, supportedCVM, ~channelID, d, t),
+        nc, CID, transaction, supportedCVM, ~channelID, t),
       Send($Terminal, $Bank, <~channelID, 'Mastercard', '1'>,
         <transaction, encPIN>) ]
 
@@ -481,10 +473,10 @@ rule Terminal_Commits_TC:
         //supportedCVM = 'OnlinePIN'
         value = 'High'
         DH = <Card_Eph_Pk, Terminal_Eph_Pk, Secret>
-        transaction = <~PAN, AIP, CVM, X, ATC, DH, d, t, AC, IAD>
+        transaction = <~PAN, AIP, CVM, X, ATC, DH, t, AC, IAD>
     in
     [ Terminal_Received_AC($Terminal, $Bank, $CA,
-        nc, 'TC', transaction, supportedCVM, ~channelID, d, t),
+        nc, 'TC', transaction, supportedCVM, ~channelID, t),
       !Value($amount, value) ]
   --[ TerminalAccepts(transaction), 
       Secret_Sigma(Secret),
@@ -497,7 +489,7 @@ rule Terminal_Commits_TC:
 rule Bank_Receives_AC:
     let AC = MAC(f(~MK, ATC), <X, AIP, ATC, IAD>)
         ARPC = MAC_arpc(f(~MK, ATC), AC XOR p8('ARC'))
-        transaction = <~PAN, AIP, CVM, X, ATC, DH, d, t, AC, IAD>
+        transaction = <~PAN, AIP, CVM, X, ATC, DH, t, AC, IAD>
     in
     [ Recv($Terminal, $Bank, <channelID, 'Mastercard', '1'>,
         <transaction, encPIN>),
@@ -508,7 +500,7 @@ rule Bank_Receives_AC:
 
 rule Bank_Receives_AC_Failed:
     let correctAC = MAC(f(~MK, ATC), <X, AIP, ATC, IAD>)
-        transaction = <~PAN, AIP, CVM, X, ATC, DH, d, t, AC, IAD>
+        transaction = <~PAN, AIP, CVM, X, ATC, DH, t, AC, IAD>
     in
     [ Recv($Terminal, $Bank, <channelID, 'Mastercard', '1'>,
         <transaction, encPIN>),
@@ -518,7 +510,7 @@ rule Bank_Receives_AC_Failed:
     [ ]
 
 rule Bank_Processes_CVM_NotOnlinePIN:
-    let transaction = <~PAN, AIP, CVM, X, ATC, DH, d, t, AC, IAD>
+    let transaction = <~PAN, AIP, CVM, X, ATC, DH, t, AC, IAD>
     in
     [ Bank_Checked_AC($Bank, $Terminal, transaction, 'Null', channelID, ARPC) ]
   --[ NEq(CVM, 'OnlinePIN'),
@@ -530,7 +522,7 @@ rule Bank_Commits:
         X = <PDOL, CDOL1>
         AIP = <'CDA', furtherData>
         value = 'High'
-        transaction = <~PAN, AIP, CVM, X, ATC, DH, d, t, AC, IAD>
+        transaction = <~PAN, AIP, CVM, X, ATC, DH, t, AC, IAD>
     in
     [ Bank_Commits($Bank, $Terminal, transaction, channelID, ARPC),
       !Value(amount, value),
@@ -542,7 +534,7 @@ rule Bank_Commits:
 
 rule Bank_Processes_CVM_OnlinePIN:
     let encPIN = aenc{PIN}pk(~privkBank)
-        transaction = <~PAN, AIP, 'OnlinePIN', X, ATC, DH, d, t, AC, IAD>
+        transaction = <~PAN, AIP, 'OnlinePIN', X, ATC, DH, t, AC, IAD>
     in
     [ Bank_Checked_AC($Bank, $Terminal, transaction, encPIN, channelID, ARPC),
       !LtkBank($Bank, ~privkBank),
@@ -558,10 +550,10 @@ rule Terminal_Commits_ARQC:
         //supportedCVM = 'OnlinePIN'
         value = 'High'
         DH = <Card_Eph_Pk, Terminal_Eph_Pk, Secret>
-        transaction = <~PAN, AIP, CVM, X, ATC, DH, d, t, AC, IAD>
+        transaction = <~PAN, AIP, CVM, X, ATC, DH, t, AC, IAD>
     in
     [ Terminal_Received_AC($Terminal, $Bank, $CA,
-        nc, 'ARQC', transaction, supportedCVM, ~channelID, d, t),
+        nc, 'ARQC', transaction, supportedCVM, ~channelID, t),
       !Value($amount, value),
       Recv($Bank, $Terminal, <~channelID, 'Mastercard', '2'>, <'ARC', ARPC>) ]
   --[ TerminalAccepts(transaction),

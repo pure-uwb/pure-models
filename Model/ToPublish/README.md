@@ -20,7 +20,8 @@ For our purposes, we need only one configuration, namely the Mastercard kernel w
 Compared to the original models, we do not restrict our model to a single Cardholder Verification Method (CVM), but allow cards to perform On-Device Cardholder Verification (ODCVM) which is performed on the cardholder's device, such as a mobile phone, and includes checks such as face or finger print recognition.
 
 To model the extension of the EMV standard proposed in PURE, we have extended the model with a Diffie-Hellman key exchange. 
-We proof non-injective agreement on the Diffie-Hellman shares by including them in the integrity protected transaction data.
+We abstract the UWB ranging by modeling the timing data as a nonce created by the card that it sends in clear to the terminal.
+We proof non-injective agreement on the Diffie-Hellman shares and the timing data by including them in the integrity protected transaction data.
 In addition to the integrity properties, we prove the original secrecy properties of the shared and private keys of the card and of the PIN. Furthermore, we prove a new secrecy lemma on the derived secret established by the Diffie-Hellman extension of the original protocol.
 
 
@@ -28,4 +29,4 @@ In addition to the integrity properties, we prove the original secrecy propertie
 
 The claims (lemmas) in the model have been automatically proven using the Tamarin prover release version 1.8.0 using the provided oracle. The derivation check timeout was set to two minutes.
 
-The proofs took 60 minutes on a computing server running Ubuntu 20.04.3 with two Intel(R) Xenon(R) E5-2650 v4@2.20GHz CPUs (with 12 cores each) and 256GB of RAM. We have limited the number of threads to 14 and the memory consumption (RAM) to 32GB.
+The proofs took 65 minutes on a computing server running Ubuntu 20.04.3 with two Intel(R) Xenon(R) E5-2650 v4@2.20GHz CPUs (with 12 cores each) and 256GB of RAM. We have limited the number of threads to 14 and the memory consumption (RAM) to 32GB.
