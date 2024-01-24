@@ -1,1 +1,0 @@
-tamarin-prover-release-1.8.0 --prove EMV_Mastercard_Secure_Ranging_Ext.spthy --heuristic=O --oraclename=Mastercard.oracle +RTS -N14 -M32G -RTS --output=EMV_Mastercard_Secure_Ranging_Ext.proof  --derivcheck-timeout=120
