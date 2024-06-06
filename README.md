@@ -4,12 +4,16 @@ This README accompanies the Tamarin models associated with the paper "PURE: Paym
 
 Our Tamarin models are based on the [EMV models](https://github.com/EMVrace/EMVerify) by David Basin, Ralf Sasse, and Jorge Toro-Pozo. These models have been used to prove results published in the IEEE S&P 2021 paper "The EMV Standard: Break, Fix, Verify", see also the [project page](https://emvrace.github.io/).
 
+## How to install Tamarin
+
+Follow the instruction on the [tamarin-prover](https://tamarin-prover.com/#installation) website. For ubuntu users, we suggest downloading the [v1.8](https://github.com/tamarin-prover/tamarin-prover/releases/tag/1.8.0) from Github.
+
 ## Files
 
 The formal proofs described in our paper can be reproduced using the following files:
 
 - `EMV_Mastercard_SecureRanging_Ext.spthy`: The Tamarin model of the Mastercard kernel modelling the PURE extension
-- `EMV_Mastercard_SecureRanging_Ext.proof`: The proofs for the model
+- `EMV_Mastercard_Secure_Ranging_Ext_proof.spthy`: The proofs for the model
 - `Mastercard.oracle`: Proof-support oracle
 
 ## Modifications of the Original Sources
@@ -30,3 +34,39 @@ In addition to the integrity properties, we prove the original secrecy propertie
 The claims (lemmas) in the model have been automatically proven using the Tamarin prover release version 1.8.0 using the provided oracle. The derivation check timeout was set to two minutes.
 
 The proofs took 65 minutes on a computing server running Ubuntu 20.04.3 with two Intel(R) Xenon(R) E5-2650 v4@2.20GHz CPUs (with 12 cores each) and 256GB of RAM. We have limited the number of threads to 14 and the memory consumption (RAM) to 32GB.
+
+The proofs were executed with the following command `tamarin-prover-release-1.8.0 --prove EMV_Mastercard_Secure_Ranging_Ext.spthy --heuristic=O --oraclename=Mastercard.oracle +RTS -N14 -M32G -RTS --output=EMV_Mastercard_Secure_Ranging_Ext.proof  --derivcheck-timeout=120`
+
+## How to load the proofs
+
+To load the proof run `tamarin-prover  --prove EMV_Mastercard_Secure_Ranging_Ext_proof.spthy --derivcheck-timeout=0`
+
+Following is the expected results
+
+```
+==============================================================================
+summary of summaries:
+
+analyzed: EMV_Mastercard_Secure_Ranging_Ext_proof.spthy
+
+  processing time: 4695.21s
+
+  executable (exists-trace): verified (392 steps)
+  executable_ODCVM (exists-trace): verified (274 steps)
+  bank_accepts (all-traces): verified (636 steps)
+  auth_to_terminal_minimal (all-traces): verified (243 steps)
+  auth_to_terminal (all-traces): verified (941 steps)
+  auth_to_terminal_minimal_dh (all-traces): verified (163 steps)
+  auth_to_terminal_dh (all-traces): verified (2367 steps)
+  auth_to_bank_minimal (all-traces): verified (241 steps)
+  auth_to_bank (all-traces): verified (849 steps)
+  secrecy_MK (all-traces): verified (6 steps)
+  secrecy_privkCard (all-traces): verified (7 steps)
+  secrecy_PIN (all-traces): verified (3 steps)
+  secrecy_PAN (all-traces): falsified - found trace (40 steps)
+  secrecy_SIGMA (all-traces): verified (10211 steps)
+
+==============================================================================
+```
+
+
